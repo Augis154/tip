@@ -1,0 +1,131 @@
+============
+= CPU Spec =
+=============
+
+2026-07-30
+
+Description:
+It is a 32 bit RISC CPU architecture
+
+General:
+Little endian
+32-bit data bus
+32-bit address bus
+
+Abbreviations:
+rd - Destination register
+r1 - 1st register
+r2 - 2nd register
+imm  - Immediate value
+simm - Signed immediate value
+uimm - Unsigned immediate value
+
+
+=== INSTRUCTION LAYOUTS ===
+R type:
+31 30 29 28 27 26 25 24 23 22 21 20 19 18 17 16 15 14 13 12 11 10 9 8 7 6 5 4 3 2 1 0
+|           fn9           |      r2      |      r1      |     rd     |  fn4  | tag4 |
+
+I type:
+31 30 29 28 27 26 25 24 23 22 21 20 19 18 17 16 15 14 13 12 11 10 9 8 7 6 5 4 3 2 1 0
+|               imm[13:0]                |      r1      |     rd     |  fn4  | tag4 |
+
+S type: (Storing data / Branching)
+31 30 29 28 27 26 25 24 23 22 21 20 19 18 17 16 15 14 13 12 11 10 9 8 7 6 5 4 3 2 1 0
+|        imm[13:5]        |      r2      |      r1      |  imm[4:0]  |  fn4  | tag4 |
+
+U type: (Upper values / Jumping)
+31 30 29 28 27 26 25 24 23 22 21 20 19 18 17 16 15 14 13 12 11 10 9 8 7 6 5 4 3 2 1 0
+|                       imm[18:0]                       |     rd     |  fn4  | tag4 |
+
+
+=== INSTRUCTIONS ===
+ALU-Reg: tag4 = 0000
+ADD   rd, r1, r2      => rd = r1 + r2
+SUB   rd, r1, r2      => rd = r1 - r2
+
+AND   rd, r1, r2      => rd = r1 and r2
+OR    rd, r1, r2      => rd = r1 or r2
+XOR   rd, r1, r2      => rd = r1 xor r2
+
+SLL   rd, r1, r2      => rd = r1 << r2
+SRL   rd, r1, r2      => rd = r1 >> r2
+SRA   rd, r1, r2      => rd = r1 >>> r2
+
+SEQ   rd, r1, r2      => rd = (r1 =  r2) ? 1 : 0
+SNE   rd, r1, r2      => rd = (r1 != r2) ? 1 : 0
+SLT   rd, r1, r2      => rd = (r1 <  r2) ? 1 : 0
+SLTU  rd, r1, r2      => rd = (r1 <  r2) ? 1 : 0
+
+MUL   rd, r1, r2      => rd = r1 * r2
+MULH  rd, r1, r2      => rd = r1 * r2
+MULHU rd, r1, r2      => rd = r1 * r2
+
+DIV   rd, r1, r2      => rd = r1 / r2
+REM   rd, r1, r2      => rd = r1 mod r2
+DIVU  rd, r1, r2      => rd = r1 / r2
+REMU  rd, r1, r2      => rd = r1 mod r2
+
+
+ALU-Imm: tag4 = 0001
+ADDI  rd, r1, simm14  => rd = r1 + simm14
+
+ANDI  rd, r1, uimm14  => rd = r1 and uimm14
+ORI   rd, r1, uimm14  => rd = r1 or uimm14
+XORI  rd, r1, uimm14  => rd = r1 xor uimm14
+
+SLLI  rd, r1, uimm5   => rd = r1 << uimm5
+SRLI  rd, r1, uimm5   => rd = r1 >> uimm5
+SRAI  rd, r1, uimm5   => rd = r1 >>> uimm5
+
+SEQI  rd, r1, simm14  => rd = (r1 =  simm14) ? 1 : 0
+SNEI  rd, r1, simm14  => rd = (r1 != simm14) ? 1 : 0
+SLTI  rd, r1, simm14  => rd = (r1 <  simm14) ? 1 : 0
+SLTIU rd, r1, simm14  => rd = (r1 <  simm14) ? 1 : 0
+
+
+Loads: tag4 = 0010
+LDB rd, r1, simm14    => r2 = [r1 + simm14]
+LDH rd, r1, simm14    => r2 = [r1 + simm14]
+LDW rd, r1, simm14    => r2 = [r1 + simm14]
+
+LDBU  rd, r1, simm14  => r2 = [r1 + simm14]
+LDHU  rd, r1, simm14  => r2 = [r1 + simm14]
+
+
+Stores: tag4 = 0011
+STB r2, r1, simm14    => [r1 + simm14] = r2
+STH r2, r1, simm14    => [r1 + simm14] = r2
+STW r2, r1, simm14    => [r1 + simm14] = r2
+
+
+Control flow: tag4 = 0100
+BEQ   r1, r2, imm14   => If r1 == r2 -> PC += imm14 << 2
+BNE   r1, r2, imm14   => If r1 != r2 -> PC += imm14 << 2
+BLT   r1, r2, simm14  => If r1 <  r2 -> PC += simm14 << 2
+BGE   r1, r2, simm14  => If r1 >= r2 -> PC += simm14 << 2
+BLTU  r1, r2, uimm14  => If r1 <  r2 -> PC += uimm14 << 2
+BGEU  r1, r2, uimm14  => If r1 >= r2 -> PC += uimm14 << 2
+
+JAS   rd, imm19       => rd = PC + 4; PC += imm19 << 2
+JASR  rd, r1, imm14   => rd = PC + 4; PC = r1 + imm14
+
+
+Upper: tag4 = 0101
+LDUI  rd, imm19       => rd = imm19 << 13
+LDUPC rd, imm19       => rd = PC + (imm19 << 13)
+
+
+System: tag4 = 1111
+ECALL
+ERET
+FENCE
+
+
+=== REGISTERS ===
+Has 32 32-bit registers R0 to R31
+
+R0 is hardwired to all 0
+
+There is also separate register:
+Program counter (PC)
