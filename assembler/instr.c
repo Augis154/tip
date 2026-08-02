@@ -5,24 +5,17 @@
 #include <stddef.h>
 #include <stdlib.h>
 
+#define INSTR_TABLE_SIZE 256
+
 static InstrDef instr_table[INSTR_TABLE_SIZE];
-static StrTable *instr_lut;
 
-void instr_init_lut() {
-  instr_lut = malloc(sizeof(StrTable));
-  st_init(instr_lut, INSTR_TABLE_SIZE);
-
+void instr_init_lut(StrTable *instr_lut) {
   for (size_t i = 0; instr_table[i].mnemonic != NULL; i++) {
     st_put(instr_lut, instr_table[i].mnemonic, &instr_table[i]);
   }
 }
 
-void instr_free_lut() {
-  st_free(instr_lut);
-  free(instr_lut);
-}
-
-InstrDef *instr_get_def(const char *mnemonic) {
+InstrDef *instr_lookup(StrTable *instr_lut, const char *mnemonic) {
   return (InstrDef *)st_get(instr_lut, mnemonic);
 }
 
@@ -69,16 +62,16 @@ static InstrDef instr_table[INSTR_TABLE_SIZE] = {
   {"sltui", TAG_ALU_IMM, ALU_SLTU, FORMAT_I, 0},
 
   // Load Instructions
-  {"lb", TAG_LOAD, MEM_BYTE, FORMAT_I, 0},
-  {"lh", TAG_LOAD, MEM_HALF, FORMAT_I, 0},
-  {"lw", TAG_LOAD, MEM_WORD, FORMAT_I, 0},
-  {"lbu", TAG_LOAD, MEM_BYTE_U, FORMAT_I, 0},
-  {"lhu", TAG_LOAD, MEM_HALF_U, FORMAT_I, 0},
+  {"ldb", TAG_LOAD, MEM_BYTE, FORMAT_I, 0},
+  {"ldh", TAG_LOAD, MEM_HALF, FORMAT_I, 0},
+  {"ldw", TAG_LOAD, MEM_WORD, FORMAT_I, 0},
+  {"ldbu", TAG_LOAD, MEM_BYTE_U, FORMAT_I, 0},
+  {"ldhu", TAG_LOAD, MEM_HALF_U, FORMAT_I, 0},
 
   // Store Instructions
-  {"sb", TAG_STORE, MEM_BYTE, FORMAT_S, 0},
-  {"sh", TAG_STORE, MEM_HALF, FORMAT_S, 0},
-  {"sw", TAG_STORE, MEM_WORD, FORMAT_S, 0},
+  {"stb", TAG_STORE, MEM_BYTE, FORMAT_S, 0},
+  {"sth", TAG_STORE, MEM_HALF, FORMAT_S, 0},
+  {"stw", TAG_STORE, MEM_WORD, FORMAT_S, 0},
 
   // Control Instructions
   {"beq", TAG_CTRL, CTRL_EQ, FORMAT_S, 0},

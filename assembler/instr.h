@@ -5,8 +5,6 @@
 
 #include <stdint.h>
 
-#define INSTR_TABLE_SIZE 256
-
 typedef enum {
   FORMAT_R,
   FORMAT_I,
@@ -24,9 +22,9 @@ typedef struct {
   uint16_t fn9; // Extension bits for R-type or Shift Type
 } InstrDef;
 
-void instr_init_lut();
-void instr_free_lut();
+void instr_init_lut(StrTable *instr_lut);
+void instr_free_lut(StrTable *instr_lut);
 
-InstrDef *instr_get_def(const char *mnemonic);
+InstrDef *instr_lookup(StrTable *instr_lut, const char *mnemonic);
 
 #endif // INSTR_H

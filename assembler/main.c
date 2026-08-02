@@ -1,17 +1,12 @@
+#include "assembler.h"
 #include "instr.h"
+#include "parser.h"
 
-#include <ctype.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 #define shift(argc, argv) ((argc)--, (argv)++[0])
-
-static char *to_lower(char *s) {
-  for (char *p = s; *p; p++) {
-    *p = tolower(*p);
-  }
-  return s;
-}
 
 int main(int argc, char *argv[]) {
   char *prg_name = shift(argc, argv);
@@ -29,29 +24,44 @@ int main(int argc, char *argv[]) {
     return 1;
   }
 
-  instr_init_lut();
+  AssemblerCtx ctx;
 
-  char line[256];
+  ctx.filename = filename;
+  ctx.file = file;
 
-  while (fgets(line, sizeof(line), file)) {
-    if (line[0] == '\n' || line[0] == ';') {
-      continue;
+  ctx.instr_lut = malloc(sizeof(StrTable));
+  st_init(ctx.instr_lut, 256);
+
+  instr_init_lut(ctx.instr_lut);
+
+  Lines lines = parse_file(&ctx);
+
+  for (size_t i = 0; i < lines.count; i++) {
+    Line line = lines.lines[i];
+
+    switch (line.type) {
+    case LINE_EMPTY:
+      printf("Line %u: Empty\n", line.line_num);
+      break;
+    case LINE_LABEL:
+      printf("Line %u: Label: %s\n", line.line_num, line.label);
+      break;
+    case LINE_INSTR:
+      printf("Line %u: Instruction: %s\n", line.line_num, line.mnemonic);
+      printf("  rd: %u, r1: %u, r2: %u, imm: %d\n", line.rd, line.r1, line.r2, line.imm);
+      break;
+    case LINE_DIRECTIVE:
+      printf("Line %u: Directive: %s\n", line.line_num, line.mnemonic);
+      break;
+    default:
+      printf("Line %u: Unknown type\n", line.line_num);
+      break;
     }
-
-    char *token = strtok(line, ", ");
-    token = to_lower(token);
-
-    InstrDef *instr_def = instr_get_def(token);
-
-    if (!instr_def) {
-      fprintf(stderr, "Unknown instruction: %s\n", token);
-      continue;
-    }
-
-    printf("Instruction: %s\n", instr_def->mnemonic);
   }
 
-  instr_free_lut();
+  free_lines(&lines);
+  st_free(ctx.instr_lut);
+  free(ctx.instr_lut);
 
   fclose(file);
 
