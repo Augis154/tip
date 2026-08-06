@@ -30,6 +30,10 @@ I type:
 31 30 29 28 27 26 25 24 23 22 21 20 19 18 17 16 15 14 13 12 11 10 9 8 7 6 5 4 3 2 1 0
 |               imm[13:0]                |      r1      |     rd     |  fn4  | tag4 |
 
+IS type:
+31 30 29 28 27 26 25 24 23 22 21 20 19 18 17 16 15 14 13 12 11 10 9 8 7 6 5 4 3 2 1 0
+|           fn9           |    shamt5    |      r1      |     rd     |  fn4  | tag4 |
+
 S type: (Storing data / Branching)
 31 30 29 28 27 26 25 24 23 22 21 20 19 18 17 16 15 14 13 12 11 10 9 8 7 6 5 4 3 2 1 0
 |        imm[13:5]        |      r2      |      r1      |  imm[4:0]  |  fn4  | tag4 |
@@ -74,9 +78,9 @@ ANDI  rd, r1, uimm14  => rd = r1 and uimm14
 ORI   rd, r1, uimm14  => rd = r1 or uimm14
 XORI  rd, r1, uimm14  => rd = r1 xor uimm14
 
-SLLI  rd, r1, uimm5   => rd = r1 << uimm5
-SRLI  rd, r1, uimm5   => rd = r1 >> uimm5
-SRAI  rd, r1, uimm5   => rd = r1 >>> uimm5
+SLLI  rd, r1, shamt5  => rd = r1 << shamt5
+SRLI  rd, r1, shamt5  => rd = r1 >> shamt5
+SRAI  rd, r1, shamt5  => rd = r1 >>> shamt5
 
 SEQI  rd, r1, simm14  => rd = (r1 =  simm14) ? 1 : 0
 SNEI  rd, r1, simm14  => rd = (r1 != simm14) ? 1 : 0
