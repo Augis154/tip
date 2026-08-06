@@ -121,6 +121,8 @@ ECALL
 ERET
 FENCE
 
+=== RESET VECTOR ===
+Reset vector is at address 0xFFC (last 4 bytes of first 4096 bytes)
 
 === REGISTERS ===
 Has 32 32-bit registers R0 to R31

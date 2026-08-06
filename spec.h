@@ -76,6 +76,8 @@ typedef enum {
   SYS_EBREAK = 0b0001,
 } SysOp;
 
+#define RESET_VECTOR 0xFFC
+
 #define POS_TAG 0
 #define POS_FN 4
 #define POS_RD 8
