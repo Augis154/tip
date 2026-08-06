@@ -139,7 +139,7 @@ static size_t tokenize_line(AssemblerCtx *ctx, Token *tokens, const char *line) 
       }
       norm[norm_len] = '\0';
 
-      InstrDef *instr_def = instr_lookup(ctx->instr_lut, norm);
+      const InstrDef *instr_def = instr_lookup(ctx->instr_lut, norm);
       if (instr_def) {
         token->type = TOKEN_MNEMONIC;
         token->lexeme = instr_def->mnemonic;
@@ -275,7 +275,7 @@ static Line parse_line(AssemblerCtx *ctx, Token *tokens, size_t token_count, uin
     parsed_line.type = LINE_INSTR;
     parsed_line.mnemonic = tokens[0].lexeme;
 
-    InstrDef *instr_def = instr_lookup(ctx->instr_lut, tokens[0].lexeme);
+    const InstrDef *instr_def = instr_lookup(ctx->instr_lut, tokens[0].lexeme);
 
     switch (instr_def->format) {
     case FORMAT_R:

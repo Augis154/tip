@@ -29,10 +29,7 @@ int main(int argc, char *argv[]) {
   ctx.filename = filename;
   ctx.file = file;
 
-  ctx.instr_lut = malloc(sizeof(StrTable));
-  st_init(ctx.instr_lut, 256);
-
-  instr_init_lut(ctx.instr_lut);
+  ctx.instr_lut = instr_create_lut();
 
   Lines lines = parse_file(&ctx);
 
@@ -60,8 +57,7 @@ int main(int argc, char *argv[]) {
   }
 
   free_lines(&lines);
-  st_free(ctx.instr_lut);
-  free(ctx.instr_lut);
+  instr_free_lut(ctx.instr_lut);
 
   fclose(file);
 

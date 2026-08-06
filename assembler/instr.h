@@ -8,23 +8,35 @@
 typedef enum {
   FORMAT_R,
   FORMAT_I,
+  FORMAT_IS, // For shift instructions
   FORMAT_S,
   FORMAT_U,
-  FORMAT_IS, // For shift instructions
   FORMAT_ALIAS,
 } Format;
 
+typedef enum {
+  OPT_NONE = 0b000,
+  OPT_REG = 0b001,
+  OPT_IMM = 0b010,
+  OPT_LABEL = 0b100,
+} OperandType;
+
 typedef struct {
   const char *mnemonic;
-  uint8_t tag;
   uint8_t opcode;
   Format format;
-  uint16_t fn9; // Extension bits for R-type or Shift Type
+  uint16_t ext; // Extension bits for R-type or Shift Type
 } InstrDef;
 
-void instr_init_lut(StrTable *instr_lut);
+typedef struct {
+  uint8_t op_count;
+  uint8_t types[3];
+} FormatRule;
+
+StrTable *instr_create_lut();
 void instr_free_lut(StrTable *instr_lut);
 
-InstrDef *instr_lookup(StrTable *instr_lut, const char *mnemonic);
+const InstrDef *instr_lookup(StrTable *instr_lut, const char *mnemonic);
+const FormatRule *format_rule_lookup(Format format);
 
 #endif // INSTR_H

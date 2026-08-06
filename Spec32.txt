@@ -85,18 +85,18 @@ SLTIU rd, r1, simm14  => rd = (r1 <  simm14) ? 1 : 0
 
 
 Loads: tag4 = 0010
-LDB rd, r1, simm14    => r2 = [r1 + simm14]
-LDH rd, r1, simm14    => r2 = [r1 + simm14]
-LDW rd, r1, simm14    => r2 = [r1 + simm14]
+LB rd, r1, simm14    => r2 = [r1 + simm14]
+LH rd, r1, simm14    => r2 = [r1 + simm14]
+LW rd, r1, simm14    => r2 = [r1 + simm14]
 
-LDBU  rd, r1, simm14  => r2 = [r1 + simm14]
-LDHU  rd, r1, simm14  => r2 = [r1 + simm14]
+LBU  rd, r1, simm14  => r2 = [r1 + simm14]
+LHU  rd, r1, simm14  => r2 = [r1 + simm14]
 
 
 Stores: tag4 = 0011
-STB r2, r1, simm14    => [r1 + simm14] = r2
-STH r2, r1, simm14    => [r1 + simm14] = r2
-STW r2, r1, simm14    => [r1 + simm14] = r2
+SB r2, r1, simm14    => [r1 + simm14] = r2
+SH r2, r1, simm14    => [r1 + simm14] = r2
+SW r2, r1, simm14    => [r1 + simm14] = r2
 
 
 Control flow: tag4 = 0100
@@ -112,8 +112,8 @@ JASR  rd, r1, imm14   => rd = PC + 4; PC = r1 + imm14
 
 
 Upper: tag4 = 0101
-LDUI  rd, imm19       => rd = imm19 << 13
-LDUPC rd, imm19       => rd = PC + (imm19 << 13)
+LUI  rd, imm19       => rd = imm19 << 13
+LUPC rd, imm19       => rd = PC + (imm19 << 13)
 
 
 System: tag4 = 1111

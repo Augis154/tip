@@ -67,8 +67,8 @@ typedef enum {
 } CtrlOp;
 
 typedef enum {
-  UPPER_LDUI = 0b0000,
-  UPPER_LDUPC = 0b0001,
+  UPPER_LUI = 0b0000,
+  UPPER_LUPC = 0b0001,
 } UpperOp;
 
 typedef enum {
@@ -84,7 +84,10 @@ typedef enum {
 #define POS_IMM14 18
 #define POS_IMM19 13
 
-#define MASK_TAG 0xF       // 4 bits
+#define MASK_TAG 0xF // 4 bits
+#define MASK_FN 0xF  // 4 bits
+#define MASK_OP 0xFF // 8 bits
+
 #define MASK_REG 0x1F      // 5 bits
 #define MASK_IMM14 0x3FFF  // 14 bits
 #define MASK_IMM19 0x7FFFF // 19 bits
