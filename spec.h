@@ -86,6 +86,7 @@ typedef enum {
 #define POS_IMM14 18
 #define POS_IMM19 13
 #define POS_SHAMT 18
+#define POS_FN9 23
 
 #define MASK_TAG 0xF // 4 bits
 #define MASK_FN 0xF  // 4 bits
@@ -95,5 +96,6 @@ typedef enum {
 #define MASK_IMM14 0x3FFF  // 14 bits
 #define MASK_IMM19 0x7FFFF // 19 bits
 #define MASK_SHAMT 0x1F    // 5 bits
+#define MASK_FN9 0x1FF     // 9 bits
 
 #endif // SPEC_H
