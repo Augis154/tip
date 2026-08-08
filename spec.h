@@ -100,7 +100,7 @@ typedef enum {
 
 // For S-type instructions, the immediate is split into two parts: imm[4:0] and imm[13:5]
 #define POS_IMM4_0 8
-#define POS_IMM13_5 18
+#define POS_IMM13_5 23
 #define MASK_IMM4_0 0x1F   // 5 bits
 #define MASK_IMM13_5 0x1FF // 9 bits
 

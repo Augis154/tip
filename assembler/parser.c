@@ -8,15 +8,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-static void add_line(Lines *lines, TypedLine line) {
-  if (lines->count >= lines->capacity) {
-    size_t new_capacity = lines->capacity == 0 ? 256 : lines->capacity * 2;
-    lines->lines = realloc(lines->lines, new_capacity * sizeof(TypedLine));
-    lines->capacity = new_capacity;
-  }
-  lines->lines[lines->count++] = line;
-}
-
 static TypedLine error_line(uint32_t line_num, const char *fmt, ...) {
   TypedLine line = {0};
   line.line_num = line_num;
@@ -157,11 +148,20 @@ static TypedLine parse_line(AssemblerCtx *ctx, TokenizedLine *tokenized_line) {
   return error_line(tokenized_line->line_num, "Unexpected token type\n");
 }
 
-Lines parse_lines(AssemblerCtx *ctx, TokenizedLine *tokenized_lines, size_t line_count) {
+static void add_line(Lines *lines, TypedLine line) {
+  if (lines->count >= lines->capacity) {
+    size_t new_capacity = lines->capacity == 0 ? 256 : lines->capacity * 2;
+    lines->lines = realloc(lines->lines, new_capacity * sizeof(TypedLine));
+    lines->capacity = new_capacity;
+  }
+  lines->lines[lines->count++] = line;
+}
+
+Lines parse_lines(AssemblerCtx *ctx, TokenizedFile *tokenized_file) {
   Lines lines = {0};
 
-  for (size_t i = 0; i < line_count; i++) {
-    TypedLine parsed_line = parse_line(ctx, &tokenized_lines[i]);
+  for (size_t i = 0; i < tokenized_file->count; i++) {
+    TypedLine parsed_line = parse_line(ctx, &tokenized_file->lines[i]);
 
     add_line(&lines, parsed_line);
   }

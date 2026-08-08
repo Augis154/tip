@@ -29,28 +29,25 @@ int main(int argc, char *argv[]) {
 
   char *filename = shift(argc, argv);
 
-  FILE *file = fopen(filename, "rb");
-  if (!file) {
+  FILE *input_file = fopen(filename, "rb");
+  if (!input_file) {
     fprintf(stderr, "Error opening file: %s\n", filename);
     return 1;
   }
 
-  AssemblerCtx ctx;
+  AssemblerCtx ctx = {0};
 
   ctx.filename = filename;
 
   ctx.instr_lut = instr_create_lut();
 
-  TokenizedLine tokenized_lines[MAX_TOKENS_PER_LINE];
-  size_t line_count = 0;
-
-  Arena str_arena;
+  Arena str_arena = {0};
 
   ctx.str_arena = &str_arena;
 
-  tokenize_file(file, &str_arena, tokenized_lines, &line_count);
+  TokenizedFile tokenized_file = tokenize_file(input_file, &str_arena);
 
-  fclose(file);
+  fclose(input_file);
 
   // for (size_t i = 0; i < line_count; i++) {
   //   TokenizedLine *tokenized_line = &tokenized_lines[i];
@@ -63,53 +60,46 @@ int main(int argc, char *argv[]) {
   //   printf("\n");
   // }
 
-  Lines lines = parse_lines(&ctx, tokenized_lines, line_count);
+  Lines lines = parse_lines(&ctx, &tokenized_file);
 
-  StrTable *labels = malloc(sizeof(StrTable));
-  st_init(labels, 16);
+  resolve_labels(&ctx, &lines);
 
-  uint32_t current_address = 0;
-  for (size_t i = 0; i < lines.count; i++) {
-    TypedLine line = lines.lines[i];
+  InstrBuffer buffer = assemble_lines(&ctx, &lines);
 
-    if (line.type != LINE_LABEL) {
-      lines.lines[i].address = current_address;
-      current_address++;
-      continue;
-    }
-
-    st_put(labels, line.label, (void *)(uintptr_t)current_address);
+  FILE *lst_file = fopen("output.lst", "w");
+  if (!lst_file) {
+    fprintf(stderr, "Error creating listing file\n");
+    return 1;
   }
 
+  size_t instr_idx = 0;
   for (size_t i = 0; i < lines.count; i++) {
-    TypedLine *line = &lines.lines[i];
+    TypedLine line = lines.lines[i];
+    uint32_t instruction = buffer.instr[instr_idx];
 
-    if (line->type != LINE_INSTR) {
+    if (line.type != LINE_INSTR) {
       continue;
     }
 
-    for (size_t j = 0; j < line->arg_count; j++) {
-      Operand *arg = &line->args[j];
+    fprintf(lst_file, "%04X: %032b    ", line.address * 4, instruction);
+    fprintf(lst_file, "%s", line.mnemonic);
 
-      if (arg->type == OPT_LABEL) {
-        void *label_addr_ptr = st_get(labels, arg->label);
-        if (!label_addr_ptr) {
-          fprintf(stderr, "[Line %u] Error: Undefined label '%s'\n", line->line_num, arg->label);
-          continue;
-        }
-
-        size_t label_addr = (size_t)(uintptr_t)label_addr_ptr;
-        int32_t offset = (int32_t)label_addr - (int32_t)line->address;
-
-        if (offset < INT14_MIN || offset > INT14_MAX) {
-          fprintf(stderr, "[Line %u] Error: Label '%s' address out of range\n", line->line_num, arg->label);
-          continue;
-        }
-
-        arg->type = OPT_IMM;
-        arg->imm_value = offset;
+    for (size_t j = 0; j < line.arg_count; j++) {
+      Operand arg = line.args[j];
+      switch (arg.type) {
+      case OPT_REG:
+        fprintf(lst_file, " R%u", arg.reg_num);
+        break;
+      case OPT_IMM:
+        fprintf(lst_file, " %d", arg.imm_value);
+        break;
+      default:
+        break;
       }
     }
+
+    fprintf(lst_file, "\n");
+    instr_idx++;
   }
 
   FILE *output_file = fopen("output.bin", "wb");
@@ -118,90 +108,8 @@ int main(int argc, char *argv[]) {
     return 1;
   }
 
-  for (size_t i = 0; i < lines.count; i++) {
-    TypedLine line = lines.lines[i];
-
-    if (line.type != LINE_INSTR) {
-      continue;
-    }
-
-    char *normalized_mnemonic = arena_strdup(&str_arena, line.mnemonic);
-
-    for (size_t j = 0; j < strlen(normalized_mnemonic); j++) {
-      normalized_mnemonic[j] = tolower(normalized_mnemonic[j]);
-    }
-
-    const InstrDef *instr_def = instr_lookup(ctx.instr_lut, normalized_mnemonic);
-
-    if (!instr_def) {
-      fprintf(stderr, "[Line %u] Error: Unknown instruction '%s'\n", line.line_num, line.mnemonic);
-      continue;
-    }
-
-    uint32_t instruction = 0;
-
-    switch (instr_def->format) {
-    case FORMAT_R: {
-      uint8_t opcode = instr_def->opcode & MASK_OP;
-
-      uint8_t rd = line.args[0].reg_num & MASK_REG;
-      uint8_t r1 = line.args[1].reg_num & MASK_REG;
-      uint8_t r2 = line.args[2].reg_num & MASK_REG;
-
-      uint8_t ext = instr_def->ext & MASK_FN9;
-
-      instruction = (opcode) | (rd << POS_RD) | (r1 << POS_R1) | (r2 << POS_R2) | (ext << POS_FN9);
-      break;
-    }
-    case FORMAT_I: {
-      uint8_t opcode = instr_def->opcode & MASK_OP;
-
-      uint8_t rd = line.args[0].reg_num & MASK_REG;
-      uint8_t r1 = line.args[1].reg_num & MASK_REG;
-      int32_t imm = line.args[2].imm_value & MASK_IMM14;
-
-      instruction = (opcode) | (rd << POS_RD) | (r1 << POS_R1) | (imm << POS_IMM14);
-      break;
-    }
-    case FORMAT_IS: {
-      uint8_t opcode = instr_def->opcode & MASK_OP;
-
-      uint8_t rd = line.args[0].reg_num & MASK_REG;
-      uint8_t r1 = line.args[1].reg_num & MASK_REG;
-      int32_t shamt = line.args[2].imm_value & MASK_SHAMT;
-
-      uint16_t ext = instr_def->ext & MASK_FN9;
-
-      instruction = (opcode) | (rd << POS_RD) | (r1 << POS_R1) | (shamt << POS_SHAMT) | (ext << POS_FN9);
-      break;
-    }
-    case FORMAT_S: {
-      uint8_t opcode = instr_def->opcode & MASK_OP;
-
-      uint8_t r1 = line.args[0].reg_num & MASK_REG;
-      uint8_t r2 = line.args[1].reg_num & MASK_REG;
-      int32_t imm = line.args[2].imm_value & MASK_IMM14;
-
-      uint16_t imm4_0 = imm & MASK_IMM4_0;
-      uint16_t imm13_5 = (imm >> 5) & MASK_IMM13_5;
-
-      instruction = (opcode) | (imm4_0 << POS_IMM4_0) | (r1 << POS_R1) | (r2 << POS_R2) | (imm13_5 << POS_IMM13_5);
-      break;
-    }
-    case FORMAT_U: {
-      uint8_t opcode = instr_def->opcode & MASK_OP;
-
-      uint8_t rd = line.args[0].reg_num & MASK_REG;
-      int32_t imm = line.args[1].imm_value & MASK_IMM19;
-
-      instruction = (opcode) | (rd << POS_RD) | (imm << POS_IMM19);
-      break;
-    }
-    default:
-      fprintf(stderr, "[Line %u] Error: Unsupported instruction format for '%s'\n", line.line_num, normalized_mnemonic);
-      continue;
-    }
-
+  for (size_t i = 0; i < buffer.count; i++) {
+    uint32_t instruction = buffer.instr[i];
     fwrite(&instruction, sizeof(instruction), 1, output_file);
   }
 

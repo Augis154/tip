@@ -8,7 +8,6 @@
 #include <stdio.h>
 
 #define MAX_TOKENS_PER_LINE 32
-#define MAX_LINE_LENGTH 256
 
 typedef enum {
   TOKEN_ERROR,
@@ -42,6 +41,12 @@ typedef struct {
   uint32_t line_num;
 } TokenizedLine;
 
-void tokenize_file(FILE *file, Arena *str_arena, TokenizedLine *tokenized_lines, size_t *line_count);
+typedef struct {
+  TokenizedLine *lines;
+  size_t count;
+  size_t capacity;
+} TokenizedFile;
+
+TokenizedFile tokenize_file(FILE *file, Arena *str_arena);
 
 #endif // LEXER_H

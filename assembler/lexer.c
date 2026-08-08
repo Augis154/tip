@@ -4,6 +4,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#define MAX_LINE_LENGTH 256
+
 static bool is_space(char c) {
   return c == ' ' || c == '\t';
 }
@@ -120,15 +122,27 @@ static TokenizedLine tokenize_line(const char *line, Arena *str_arena) {
   return tokenized_line;
 }
 
-void tokenize_file(FILE *file, Arena *str_arena, TokenizedLine *tokenized_lines, size_t *line_count) {
+static void add_line(TokenizedFile *tokenized_file, TokenizedLine line) {
+  if (tokenized_file->count >= tokenized_file->capacity) {
+    size_t new_capacity = tokenized_file->capacity == 0 ? 256 : tokenized_file->capacity * 2;
+    tokenized_file->lines = realloc(tokenized_file->lines, new_capacity * sizeof(TokenizedLine));
+    tokenized_file->capacity = new_capacity;
+  }
+  tokenized_file->lines[tokenized_file->count++] = line;
+}
+
+TokenizedFile tokenize_file(FILE *file, Arena *str_arena) {
+  TokenizedFile tokenized_file = {0};
+
   char line[MAX_LINE_LENGTH];
   uint32_t count = 0;
 
   while (fgets(line, sizeof(line), file)) {
-    tokenized_lines[count] = tokenize_line(line, str_arena);
-    tokenized_lines[count].line_num = count + 1;
+    TokenizedLine tokenized_line = tokenize_line(line, str_arena);
+    tokenized_line.line_num = count + 1;
+    add_line(&tokenized_file, tokenized_line);
     count++;
   }
 
-  *line_count = count;
+  return tokenized_file;
 }
