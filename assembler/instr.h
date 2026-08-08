@@ -23,8 +23,8 @@ typedef enum {
 
 typedef struct {
   const char *mnemonic;
-  uint8_t opcode;
   Format format;
+  uint8_t opcode;
   uint16_t ext; // Extension bits for R-type or Shift Type
 } InstrDef;
 

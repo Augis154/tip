@@ -8,320 +8,160 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define MAX_LINE_LENGTH 256
-#define MAX_TOKENS_PER_LINE 16
-
-// Lexer logic
-
-typedef enum {
-  TOKEN_ERROR,
-  TOKEN_EOL,
-
-  TOKEN_IDENTIFIER,
-  TOKEN_MNEMONIC,
-  TOKEN_REGISTER,
-  TOKEN_IMMEDIATE,
-
-  TOKEN_DOT,
-  TOKEN_COMMA,
-  TOKEN_COLON,
-} TokenType;
-
-typedef struct {
-  TokenType type;
-
-  const char *lexeme;
-  size_t lexeme_length;
-
-  int32_t value;
-} Token;
-
-static bool is_space(char c) {
-  return c == ' ' || c == '\t';
-}
-
-static bool is_eol(char c) {
-  return c == '\0' || c == '\n' || c == '\r' || c == ';';
-}
-
-static bool is_digit(char c) {
-  return c >= '0' && c <= '9';
-}
-
-static bool is_alpha(char c) {
-  return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || c == '_';
-}
-
-static bool is_alnum(char c) {
-  return is_alpha(c) || is_digit(c);
-}
-
-static char *to_lower_len(char *s, size_t len) {
-  for (char *p = s; p < s + len; p++) {
-    *p = tolower(*p);
-  }
-  return s;
-}
-
-static size_t tokenize_line(AssemblerCtx *ctx, Token *tokens, const char *line) {
-  size_t token_count = 0;
-  const char *current = line;
-
-  while (current && token_count < MAX_TOKENS_PER_LINE) {
-    while (is_space(*current)) {
-      current++;
-    }
-
-    Token *token = &tokens[token_count];
-    token_count++;
-
-    if (is_eol(*current)) {
-      token->type = TOKEN_EOL;
-      break;
-    }
-
-    token->lexeme = current;
-    token->lexeme_length = 1;
-
-    switch (*current) {
-    case '.':
-      token->type = TOKEN_DOT;
-      current++;
-      continue;
-    case ',':
-      token->type = TOKEN_COMMA;
-      current++;
-      continue;
-    case ':':
-      token->type = TOKEN_COLON;
-      current++;
-      continue;
-
-    case 'R':
-    case 'r':
-      if (is_digit(*(current + 1))) {
-        char *endptr;
-        token->value = (int32_t)strtol(current + 1, &endptr, 10);
-
-        token->type = TOKEN_REGISTER;
-        token->lexeme_length = endptr - current;
-
-        current = endptr;
-        continue;
-      }
-      break;
-    }
-
-    if (is_digit(*current) || (*current == '-' && is_digit(*(current + 1)))) {
-      char *endptr;
-      token->value = (int32_t)strtol(current, &endptr, 0);
-
-      token->type = TOKEN_IMMEDIATE;
-      token->lexeme_length = endptr - current;
-      current = endptr;
-      continue;
-    }
-
-    if (is_alpha(*current)) {
-      const char *start = current;
-      while (is_alnum(*current)) {
-        current++;
-      }
-
-      size_t length = current - start;
-
-      // Normalize to lowercase
-      char norm[16];
-      size_t norm_len = (length < sizeof(norm) - 1) ? length : sizeof(norm) - 1;
-
-      for (size_t i = 0; i < norm_len; i++) {
-        norm[i] = tolower(start[i]);
-      }
-      norm[norm_len] = '\0';
-
-      const InstrDef *instr_def = instr_lookup(ctx->instr_lut, norm);
-      if (instr_def) {
-        token->type = TOKEN_MNEMONIC;
-        token->lexeme = instr_def->mnemonic;
-      } else {
-        token->type = TOKEN_IDENTIFIER;
-        token->lexeme = start;
-      }
-
-      token->lexeme_length = length;
-      continue;
-    }
-  }
-
-  return token_count;
-}
-
-// Parser logic
-
-static void add_line(Lines *lines, Line line) {
+static void add_line(Lines *lines, TypedLine line) {
   if (lines->count >= lines->capacity) {
     size_t new_capacity = lines->capacity == 0 ? 256 : lines->capacity * 2;
-    lines->lines = realloc(lines->lines, new_capacity * sizeof(Line));
+    lines->lines = realloc(lines->lines, new_capacity * sizeof(TypedLine));
     lines->capacity = new_capacity;
   }
   lines->lines[lines->count++] = line;
 }
 
-static bool match_tokens(Token *tokens, uint32_t line_num, const char *pattern, ...) {
+static TypedLine error_line(uint32_t line_num, const char *fmt, ...) {
+  TypedLine line = {0};
+  line.line_num = line_num;
+  line.type = LINE_ERROR;
+
   va_list args;
-  va_start(args, pattern);
+  va_start(args, fmt);
 
-  size_t token_idx = 1; // Start from the second token, as the first is the mnemonic
+  fprintf(stderr, "[Line %u] Error: ", line_num);
+  vfprintf(stderr, fmt, args);
 
-  while (*pattern) {
-    Token *token = &tokens[token_idx];
+  va_end(args);
 
-    switch (*pattern) {
-    case 'r':
-      if (token->type != TOKEN_REGISTER) {
-        goto error;
-      }
-      *va_arg(args, uint8_t *) = (uint8_t)token->value;
+  return line;
+}
+
+static bool is_token_allowed(TokenType type, uint8_t allowed_mask) {
+  uint8_t actual = 0;
+
+  switch (type) {
+  case TOKEN_REGISTER:
+    actual = OPT_REG;
+    break;
+
+  case TOKEN_IMMEDIATE:
+    actual = OPT_IMM;
+    break;
+
+  case TOKEN_IDENTIFIER:
+    actual = OPT_LABEL;
+    break;
+
+  default:
+    actual = OPT_NONE;
+    break;
+  }
+
+  return (actual & allowed_mask) != 0;
+}
+
+static TypedLine parse_instruction(AssemblerCtx *ctx, TokenizedLine *tokenized_line) {
+  TypedLine typed_line = {0};
+  typed_line.line_num = tokenized_line->line_num;
+
+  size_t token_idx = 0;
+
+  const char *mnemonic = tokenized_line->tokens[token_idx].lexeme;
+  char *normalized_mnemonic = arena_strndup(ctx->str_arena, mnemonic, strlen(mnemonic));
+
+  for (size_t i = 0; i < strlen(mnemonic); i++) {
+    normalized_mnemonic[i] = tolower(normalized_mnemonic[i]);
+  }
+
+  const InstrDef *instr_def = instr_lookup(ctx->instr_lut, normalized_mnemonic);
+  if (!instr_def) {
+    return error_line(tokenized_line->line_num, "Unknown instruction '%s'\n", normalized_mnemonic);
+  }
+
+  typed_line.type = LINE_INSTR;
+  typed_line.mnemonic = mnemonic;
+
+  token_idx++;
+
+  const FormatRule *format_rule = format_rule_lookup(instr_def->format);
+
+  for (size_t i = 0; i < format_rule->op_count; i++) {
+    if (token_idx >= tokenized_line->count) {
+      return error_line(tokenized_line->line_num, "Missing operand %zu for instruction '%s'\n", i + 1, mnemonic);
+    }
+
+    Token *token = &tokenized_line->tokens[token_idx];
+
+    if (!is_token_allowed(token->type, format_rule->types[i])) {
+      return error_line(
+        tokenized_line->line_num, "Invalid type for operand %zu of instruction '%s'\n", i + 1, mnemonic);
+    }
+
+    switch (token->type) {
+    case TOKEN_REGISTER:
+      typed_line.args[i] = (Operand){.type = OPT_REG, .reg_num = token->reg_num};
       break;
 
-    case 'i':
-      if (token->type != TOKEN_IMMEDIATE) {
-        goto error;
-      }
-      *va_arg(args, int32_t *) = token->value;
+    case TOKEN_IMMEDIATE:
+      typed_line.args[i] = (Operand){.type = OPT_IMM, .imm_value = token->imm_value};
       break;
 
-    case 'l':
-      if (token->type != TOKEN_IDENTIFIER) {
-        goto error;
-      }
-      *va_arg(args, const char **) = token->lexeme;
-      break;
-
-    case ',':
-      if (token->type != TOKEN_COMMA) {
-        goto error;
-      }
+    case TOKEN_IDENTIFIER:
+      typed_line.args[i] = (Operand){.type = OPT_LABEL, .label = token->lexeme};
       break;
 
     default:
-      goto error;
+      break;
     }
 
     token_idx++;
-    pattern++;
+    typed_line.arg_count++;
+
+    if (i < format_rule->op_count - 1) {
+      if (token_idx >= tokenized_line->count || tokenized_line->tokens[token_idx].type != TOKEN_COMMA) {
+        return error_line(
+          tokenized_line->line_num, "Missing comma after operand %zu for instruction '%s'\n", i + 1, mnemonic);
+      }
+      token_idx++; // Skip the comma
+    }
   }
 
-  if (tokens[token_idx].type != TOKEN_EOL) {
-    goto error;
+  if (token_idx < tokenized_line->count && tokenized_line->tokens[token_idx].type != TOKEN_EOL) {
+    return error_line(tokenized_line->line_num, "Unexpected tokens after instruction '%s'\n", mnemonic);
   }
 
-  va_end(args);
-  return true;
-
-error:
-  va_end(args);
-
-  const char *pattern_str = pattern;
-  switch (*pattern_str) {
-  case 'r':
-    pattern_str = "register";
-    break;
-  case 'i':
-    pattern_str = "immediate";
-    break;
-  case 'l':
-    pattern_str = "label";
-    break;
-  case ',':
-    pattern_str = "','";
-    break;
-  case '\0':
-    pattern_str = "end of line";
-    break;
-  }
-
-  fprintf(stderr,
-          "[Line %u] Syntax error: Expected %s near '%.*s'\n",
-          line_num,
-          pattern_str,
-          (int)tokens[token_idx].lexeme_length,
-          tokens[token_idx].lexeme);
-
-  return false;
+  return typed_line;
 }
 
-static Line parse_line(AssemblerCtx *ctx, Token *tokens, size_t token_count, uint32_t line_num) {
-  Line parsed_line = {
-    .line_num = line_num,
-    .type = LINE_ERROR,
-  };
-
-  if (token_count == 0) {
-    parsed_line.type = LINE_EMPTY;
-    return parsed_line;
+static TypedLine parse_line(AssemblerCtx *ctx, TokenizedLine *tokenized_line) {
+  if (tokenized_line->count == 0) {
+    TypedLine empty_line = {
+      .line_num = tokenized_line->line_num,
+      .type = LINE_EMPTY,
+    };
+    return empty_line;
   }
 
-  switch (tokens[0].type) {
-  case TOKEN_IDENTIFIER:
-    if (token_count > 1 && tokens[1].type == TOKEN_COLON) {
-      parsed_line.type = LINE_LABEL;
-      parsed_line.label = strndup(tokens[0].lexeme, tokens[0].lexeme_length);
-      return parsed_line;
-    }
-    break;
+  Token *tokens = tokenized_line->tokens;
 
-  case TOKEN_MNEMONIC: {
-    parsed_line.type = LINE_INSTR;
-    parsed_line.mnemonic = tokens[0].lexeme;
-
-    const InstrDef *instr_def = instr_lookup(ctx->instr_lut, tokens[0].lexeme);
-
-    switch (instr_def->format) {
-    case FORMAT_R:
-      match_tokens(tokens, line_num, "r,r,r", &parsed_line.rd, &parsed_line.r1, &parsed_line.r2);
-      break;
-
-    case FORMAT_I:
-    case FORMAT_IS:
-      match_tokens(tokens, line_num, "r,r,i", &parsed_line.rd, &parsed_line.r1, &parsed_line.imm);
-      break;
-
-    case FORMAT_S:
-      match_tokens(tokens, line_num, "r,r,i", &parsed_line.r2, &parsed_line.r1, &parsed_line.imm);
-      break;
-
-    case FORMAT_U:
-      match_tokens(tokens, line_num, "r,i", &parsed_line.rd, &parsed_line.imm);
-      break;
-
-    default:
-      fprintf(stderr, "[Line %u] Error: Unsupported instruction format\n", line_num);
-      break;
-    }
-    break;
+  if (tokens[0].type == TOKEN_IDENTIFIER && tokenized_line->count > 1 && tokens[1].type == TOKEN_COLON) {
+    TypedLine label_line = {
+      .line_num = tokenized_line->line_num,
+      .type = LINE_LABEL,
+      .label = tokens[0].lexeme,
+    };
+    return label_line;
   }
 
-  default:
-    fprintf(stderr, "[Line %u] Error: Unexpected token type\n", line_num);
-    return parsed_line;
+  if (tokens[0].type == TOKEN_IDENTIFIER) {
+    return parse_instruction(ctx, tokenized_line);
   }
 
-  return parsed_line;
+  return error_line(tokenized_line->line_num, "Unexpected token type\n");
 }
 
-Lines parse_file(AssemblerCtx *ctx) {
+Lines parse_lines(AssemblerCtx *ctx, TokenizedLine *tokenized_lines, size_t line_count) {
   Lines lines = {0};
-  Token tokens[MAX_TOKENS_PER_LINE];
 
-  uint32_t line_num = 0;
-  char src_line[MAX_LINE_LENGTH];
-
-  while (fgets(src_line, MAX_LINE_LENGTH, ctx->file)) {
-    line_num++;
-
-    size_t token_count = tokenize_line(ctx, tokens, src_line);
-    Line parsed_line = parse_line(ctx, tokens, token_count, line_num);
+  for (size_t i = 0; i < line_count; i++) {
+    TypedLine parsed_line = parse_line(ctx, &tokenized_lines[i]);
 
     add_line(&lines, parsed_line);
   }
@@ -330,11 +170,6 @@ Lines parse_file(AssemblerCtx *ctx) {
 }
 
 void free_lines(Lines *lines) {
-  for (size_t i = 0; i < lines->count; i++) {
-    if (lines->lines[i].type == LINE_LABEL) {
-      free((void *)lines->lines[i].label);
-    }
-  }
   free(lines->lines);
   lines->lines = NULL;
   lines->count = 0;

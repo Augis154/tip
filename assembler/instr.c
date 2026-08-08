@@ -10,15 +10,15 @@
 
 #define OPCODE(tag, fn) ((uint8_t)(((tag) | (fn) << POS_FN) & MASK_OP))
 
-#define ALU_REG(mnemonic, fn, ext) {mnemonic, OPCODE(TAG_ALU_REG, fn), FORMAT_R, ext}
-#define ALU_IMM(mnemonic, fn) {mnemonic, OPCODE(TAG_ALU_IMM, fn), FORMAT_I, 0}
-#define ALU_IMM_SHIFT(mnemonic, fn, ext) {mnemonic, OPCODE(TAG_ALU_IMM, fn), FORMAT_IS, ext}
+#define ALU_REG(mnemonic, fn, ext) {mnemonic, FORMAT_R, OPCODE(TAG_ALU_REG, fn), ext}
+#define ALU_IMM(mnemonic, fn) {mnemonic, FORMAT_I, OPCODE(TAG_ALU_IMM, fn), 0}
+#define ALU_IMM_SHIFT(mnemonic, fn, ext) {mnemonic, FORMAT_IS, OPCODE(TAG_ALU_IMM, fn), ext}
 
-#define LOAD(mnemonic, fn) {mnemonic, OPCODE(TAG_LOAD, fn), FORMAT_I, 0}
-#define STORE(mnemonic, fn) {mnemonic, OPCODE(TAG_STORE, fn), FORMAT_S, 0}
+#define LOAD(mnemonic, fn) {mnemonic, FORMAT_I, OPCODE(TAG_LOAD, fn), 0}
+#define STORE(mnemonic, fn) {mnemonic, FORMAT_S, OPCODE(TAG_STORE, fn), 0}
 
-#define CTRL(mnemonic, fn, format) {mnemonic, OPCODE(TAG_CTRL, fn), format, 0}
-#define UPPER(mnemonic, fn) {mnemonic, OPCODE(TAG_UPPER, fn), FORMAT_U, 0}
+#define CTRL(mnemonic, fn, format) {mnemonic, FORMAT_U, OPCODE(TAG_CTRL, fn), 0}
+#define UPPER(mnemonic, fn) {mnemonic, FORMAT_U, OPCODE(TAG_UPPER, fn), 0}
 
 static const FormatRule format_rules[FORMAT_RULES_TABLE_SIZE];
 static const InstrDef instr_table[INSTR_TABLE_SIZE];
