@@ -20,6 +20,7 @@ typedef struct {
 void *arena_alloc(Arena *a, size_t size);
 void arena_free(Arena *a);
 
+char *arena_strdup(Arena *a, const char *str);
 char *arena_strndup(Arena *a, const char *str, size_t len);
 
 #endif // ARENA_H

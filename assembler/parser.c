@@ -131,7 +131,7 @@ static TypedLine parse_instruction(AssemblerCtx *ctx, TokenizedLine *tokenized_l
 }
 
 static TypedLine parse_line(AssemblerCtx *ctx, TokenizedLine *tokenized_line) {
-  if (tokenized_line->count == 0) {
+  if (tokenized_line->count == 0 || (tokenized_line->count == 1 && tokenized_line->tokens[0].type == TOKEN_EOL)) {
     TypedLine empty_line = {
       .line_num = tokenized_line->line_num,
       .type = LINE_EMPTY,

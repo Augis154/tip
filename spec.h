@@ -98,4 +98,15 @@ typedef enum {
 #define MASK_SHAMT 0x1F    // 5 bits
 #define MASK_FN9 0x1FF     // 9 bits
 
+// For S-type instructions, the immediate is split into two parts: imm[4:0] and imm[13:5]
+#define POS_IMM4_0 8
+#define POS_IMM13_5 18
+#define MASK_IMM4_0 0x1F   // 5 bits
+#define MASK_IMM13_5 0x1FF // 9 bits
+
+#define INT14_MIN (-16384)  // -2^14
+#define INT14_MAX 16383     // 2^14 - 1
+#define INT19_MIN (-524288) // -2^19
+#define INT19_MAX 524287    // 2^19 - 1
+
 #endif // SPEC_H

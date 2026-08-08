@@ -39,6 +39,7 @@ typedef struct {
   size_t arg_count;
 
   uint32_t line_num;
+  uint32_t address;
 } TypedLine;
 
 typedef struct {

@@ -17,7 +17,7 @@
 #define LOAD(mnemonic, fn) {mnemonic, FORMAT_I, OPCODE(TAG_LOAD, fn), 0}
 #define STORE(mnemonic, fn) {mnemonic, FORMAT_S, OPCODE(TAG_STORE, fn), 0}
 
-#define CTRL(mnemonic, fn, format) {mnemonic, FORMAT_U, OPCODE(TAG_CTRL, fn), 0}
+#define CTRL(mnemonic, fn, format) {mnemonic, format, OPCODE(TAG_CTRL, fn), 0}
 #define UPPER(mnemonic, fn) {mnemonic, FORMAT_U, OPCODE(TAG_UPPER, fn), 0}
 
 static const FormatRule format_rules[FORMAT_RULES_TABLE_SIZE];
