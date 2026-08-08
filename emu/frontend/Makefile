@@ -1,4 +1,4 @@
-src:=src/main.c
+src:=$(wildcard src/*.c)
 PHONY:=clean
 
 frontend: $(src)

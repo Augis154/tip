@@ -1,4 +1,5 @@
 #include "spec.h"
+#include "alu.h"
 #include "cpu.h"
 #include <stdlib.h>
 
@@ -28,36 +29,36 @@ void free_cpu(struct cpu *cpu)
     free(cpu->memory);
 }
 
-static uint8_t get_byte(struct cpu *cpu, uint32_t address)
+uint8_t get_byte(struct cpu *cpu, uint32_t address)
 {
-    if (address >= cpu->memory_size || address < 0) {
+    if (address >= cpu->memory_size) {
         fprintf(stderr, "Address out of bounds: %u\n", address);
         exit(1);
     }
     return *(uint8_t *)(cpu->memory + address);
 }
 
-static uint16_t get_halfword(struct cpu *cpu, uint32_t address)
+uint16_t get_halfword(struct cpu *cpu, uint32_t address)
 {
-    if (address >= cpu->memory_size - 1 || address < 0) {
+    if (address >= cpu->memory_size - 1) {
         fprintf(stderr, "Address out of bounds: %u\n", address);
         exit(1);
     }
     return *(uint16_t *)(cpu->memory + address);
 }
 
-static uint32_t get_word(struct cpu *cpu, uint32_t address)
+uint32_t get_word(struct cpu *cpu, uint32_t address)
 {
-    if (address >= cpu->memory_size - 3 || address < 0) {
+    if (address >= cpu->memory_size - 3) {
         fprintf(stderr, "Address out of bounds: %u\n", address);
         exit(1);
     }
     return *(uint32_t *)(cpu->memory + address);
 }
 
-static uint32_t get_register(struct cpu *cpu, uint8_t reg_num)
+uint32_t get_register(struct cpu *cpu, uint8_t reg_num)
 {
-    if (reg_num >= 32 || reg_num < 0) {
+    if (reg_num >= 32) {
         fprintf(stderr, "Register number out of bounds: %u\n", reg_num);
         exit(1);
     }
@@ -67,49 +68,13 @@ static uint32_t get_register(struct cpu *cpu, uint8_t reg_num)
     return cpu->R[reg_num];
 }
 
-static void write_register(struct cpu *cpu, uint8_t reg_num, uint32_t value)
+void write_register(struct cpu *cpu, uint8_t reg_num, uint32_t value)
 {
-    if (reg_num >= 32 || reg_num < 0) {
+    if (reg_num >= 32) {
         fprintf(stderr, "Register number out of bounds: %u\n", reg_num);
         exit(1);
     }
     cpu->R[reg_num] = value;
-}
-
-static int decode_alu_common(struct cpu *cpu, uint32_t instruction, uint8_t *rd, uint8_t *r1)
-{
-    *rd = (instruction >> POS_RD) & MASK_REG;
-    if (*rd == 0) {
-        return 0;
-    }
-    *r1 = (instruction >> POS_R1) & MASK_REG;
-    return 1;
-}
-
-static void decode_alu_reg(struct cpu *cpu, uint32_t instruction, uint8_t fn4)
-{
-    uint8_t rd, r1;
-    if (!decode_alu_common(cpu, instruction, &rd, &r1)) {
-        return;
-    }
-    uint8_t r2 = (instruction >> POS_R2) & MASK_REG;
-    uint16_t fn9 = (instruction >> POS_FN9) & MASK_FN9;
-    
-    switch (fn4)
-    {
-    case ALU_ADD:
-        if (fn9 == EXT_SUB) {
-            write_register(cpu, rd, get_register(cpu, r1) - get_register(cpu, r2));
-        } else {
-            write_register(cpu, rd, get_register(cpu, r1) + get_register(cpu, r2));
-        }
-        break;
-    case ALU_AND:
-        write_register(cpu, rd, get_register(cpu, r1) & get_register(cpu, r2));
-        break;
-    default:
-        break;
-    }
 }
 
 static void (*instruction_decoders[0xF])(struct cpu *cpu, uint32_t instruction, uint8_t fn4) = {
