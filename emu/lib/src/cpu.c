@@ -88,6 +88,7 @@ static void (*instruction_decoders[0xF])(struct cpu *cpu, uint32_t instruction, 
     [TAG_LOAD] = decode_load,
     [TAG_STORE] = decode_store,
     [TAG_CTRL] = decode_control,
+    [TAG_UPPER] = decode_upper,
     // Placeholder for instruction decoders
 };
 

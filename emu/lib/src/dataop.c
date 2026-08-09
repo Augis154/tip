@@ -51,3 +51,20 @@ void decode_store(struct cpu *cpu, uint32_t instruction, uint8_t fn4)
             exit(1);
     }
 }
+
+void decode_upper(struct cpu *cpu, uint32_t instruction, uint8_t fn4)
+{
+    uint8_t rd = (instruction >> POS_RD) & MASK_REG;
+    uint32_t imm = (instruction >> POS_IMM19) & MASK_IMM19;
+    switch (fn4) {
+        case UPPER_LUI:
+            write_register(cpu, rd, imm << 13);
+            break;
+        case UPPER_LUPC:
+            write_register(cpu, rd, cpu->pc + (imm << 13));
+            break;
+        default:
+            fprintf(stderr, "Unknown upper function: %u\n", fn4);
+            exit(1);
+    }
+}

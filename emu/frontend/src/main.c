@@ -5,7 +5,7 @@
 #define R_TYPE(tag, fn4, rd, r1, r2, fn9) tag | (fn4 << POS_FN) | (rd << POS_RD) | (r1 << POS_R1) | (r2 << POS_R2) | (fn9 << POS_FN9)
 #define I_TYPE(tag, fn4, rd, r1, imm) tag | (fn4 << POS_FN) | (rd << POS_RD) | (r1 << POS_R1) | (imm << POS_IMM14)
 #define IS_TYPE(tag, fn4, rd, r1, shamt, fn9) tag | (fn4 << POS_FN) | (rd << POS_RD) | (r1 << POS_R1) | (shamt << POS_SHAMT) | (fn9 << POS_FN9)
-#define S_TYPE(tag, fn4, imm, r1, r2) tag | (fn4 << POS_FN) | ((imm & MASK_IMM4_0) << POS_IMM4_0) | (r1 << POS_R1) | (r2 << POS_R2) | ((imm & MASK_IMM13_5) << POS_IMM13_5)
+#define S_TYPE(tag, fn4, imm, r1, r2) tag | (fn4 << POS_FN) | ((imm & MASK_IMM4_0) << POS_IMM4_0) | (r1 << POS_R1) | (r2 << POS_R2) | (((imm >> MASK_IMM4_0) & MASK_IMM13_5) << POS_IMM13_5)
 #define U_TYPE(tag, fn4, rd, imm) tag | (fn4 << POS_FN) | (rd << POS_RD) | (imm << POS_IMM19)
 
 uint32_t bootrom[0xFFC/4] = {
