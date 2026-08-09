@@ -1,3 +1,7 @@
 build/
 *.o
 *.so
+as
+*.bin
+*.lst
+*.asm

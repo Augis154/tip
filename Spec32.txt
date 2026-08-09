@@ -104,8 +104,8 @@ SW r2, r1, simm14    => [r1 + simm14] = r2
 
 
 Control flow: tag4 = 0100
-BEQ   r1, r2, imm14   => If r1 == r2 -> PC += imm14 << 2
-BNE   r1, r2, imm14   => If r1 != r2 -> PC += imm14 << 2
+BEQ   r1, r2, imm14   => If r1 == r2 -> PC += simm14 << 2
+BNE   r1, r2, imm14   => If r1 != r2 -> PC += simm14 << 2
 BLT   r1, r2, simm14  => If r1 <  r2 -> PC += simm14 << 2
 BGE   r1, r2, simm14  => If r1 >= r2 -> PC += simm14 << 2
 BLTU  r1, r2, uimm14  => If r1 <  r2 -> PC += uimm14 << 2

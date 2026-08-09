@@ -1,6 +1,11 @@
 #include "spec.h"
 #include "alu.h"
+#include "dataop.h"
+#include "control.h"
 #include "cpu.h"
+#ifdef DEBUG
+#include "debug.h"
+#endif
 #include <stdlib.h>
 
 void init_cpu(struct cpu *cpu, uint32_t memory_size)
@@ -79,10 +84,12 @@ void write_register(struct cpu *cpu, uint8_t reg_num, uint32_t value)
 
 static void (*instruction_decoders[0xF])(struct cpu *cpu, uint32_t instruction, uint8_t fn4) = {
     [TAG_ALU_REG] = decode_alu_reg,
+    [TAG_ALU_IMM] = decode_alu_imm,
+    [TAG_LOAD] = decode_load,
+    [TAG_STORE] = decode_store,
+    [TAG_CTRL] = decode_control,
     // Placeholder for instruction decoders
 };
-
-
 
 void step(struct cpu *cpu)
 {
@@ -90,14 +97,15 @@ void step(struct cpu *cpu)
     uint32_t instruction = get_word(cpu, cpu->pc);
     uint8_t tag4 = (instruction >> POS_TAG) & MASK_TAG;
     uint8_t fn4 = (instruction >> POS_FN) & MASK_FN;
-    cpu->pc += 4; // Increment PC by 4 for the next instruction
     
+    #ifdef DEBUG
+    print_instr(cpu, instruction);
+    #endif
+
     void (*decoder)(struct cpu *, uint32_t, uint8_t) = instruction_decoders[tag4];
     if (decoder) {
         decoder(cpu, instruction, fn4);
     }
-    // Decode and execute instruction
-    // This is a placeholder for the actual implementation of the CPU step function.
-    // The actual implementation would involve decoding the instruction and performing the appropriate operation.
-
+    
+    cpu->pc += 4; // Increment PC by 4 for the next instruction
 }

@@ -7,6 +7,10 @@ LIBPATH:=-L$(realpath lib)
 LD_LIBRARY_PATH:=$(realpath lib)
 export HEADERS LDFLAGS LIBRARIES LIBPATH LD_LIBRARY_PATH
 
+ifeq ($(DEBUG), 1)
+	WRAPPER:=gdb
+endif
+
 frontend: libcpu.so
 	$(MAKE) -C frontend 
 	cp frontend/frontend build/frontend
@@ -21,4 +25,4 @@ clean:
 	rm -f *.so *.o
 
 run: frontend
-	./frontend/frontend
+	$(WRAPPER) ./frontend/frontend
