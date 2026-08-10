@@ -33,6 +33,11 @@ typedef struct {
 } Operand;
 
 typedef struct {
+  uint32_t address;
+  uint32_t line_defined;
+} Symbol;
+
+typedef struct {
   LineType type;
 
   const char *label;
@@ -62,9 +67,12 @@ typedef struct {
   Arena *str_arena;
 
   StrTable *instr_lut;
+  StrTable *symbol_table;
 } AssemblerCtx;
 
 void resolve_labels(AssemblerCtx *ctx, Program *program);
 void assemble_lines(AssemblerCtx *ctx, Program *program);
+
+void free_symbols(AssemblerCtx *ctx);
 
 #endif // ASSEMBLER_H

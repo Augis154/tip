@@ -7,11 +7,11 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define INITIAL_LABEL_TABLE_SIZE 256
+#define INITIAL_SYMBOL_TABLE_SIZE 256
 
 void resolve_labels(AssemblerCtx *ctx, Program *program) {
-  StrTable *label_table = malloc(sizeof(StrTable));
-  st_init(label_table, INITIAL_LABEL_TABLE_SIZE);
+  ctx->symbol_table = malloc(sizeof(StrTable));
+  st_init(ctx->symbol_table, INITIAL_SYMBOL_TABLE_SIZE);
 
   uint32_t current_address = 0;
   for (size_t i = 0; i < program->count; i++) {
@@ -23,7 +23,17 @@ void resolve_labels(AssemblerCtx *ctx, Program *program) {
       continue;
     }
 
-    st_put(label_table, line.label, (void *)(uintptr_t)current_address);
+    Symbol *existing_symbol = st_get(ctx->symbol_table, line.label);
+    if (existing_symbol) {
+      fprintf(stderr, "[Line %u] Error: Duplicate label '%s'\n", line.line_num, line.label);
+      continue;
+    }
+
+    Symbol *symbol = malloc(sizeof(Symbol));
+    symbol->address = current_address;
+    symbol->line_defined = line.line_num;
+
+    st_put(ctx->symbol_table, line.label, symbol);
   }
 
   for (size_t i = 0; i < program->count; i++) {
@@ -37,14 +47,13 @@ void resolve_labels(AssemblerCtx *ctx, Program *program) {
       Operand *arg = &line->args[j];
 
       if (arg->type == OPT_LABEL) {
-        void *label_addr_ptr = st_get(label_table, arg->label_ref);
-        if (!label_addr_ptr) {
+        Symbol *symbol = st_get(ctx->symbol_table, arg->label_ref);
+        if (!symbol) {
           fprintf(stderr, "[Line %u] Error: Undefined label '%s'\n", line->line_num, arg->label_ref);
           continue;
         }
 
-        size_t label_addr = (size_t)(uintptr_t)label_addr_ptr;
-        int32_t offset = (int32_t)label_addr - (int32_t)line->address;
+        int32_t offset = symbol->address - (int32_t)line->address;
 
         if (offset < INT14_MIN || offset > INT14_MAX) {
           fprintf(stderr, "[Line %u] Error: Label '%s' address out of range\n", line->line_num, arg->label_ref);
@@ -56,9 +65,6 @@ void resolve_labels(AssemblerCtx *ctx, Program *program) {
       }
     }
   }
-
-  st_free(label_table);
-  free(label_table);
 }
 
 void assemble_lines(AssemblerCtx *ctx, Program *program) {
@@ -137,4 +143,20 @@ void assemble_lines(AssemblerCtx *ctx, Program *program) {
 
     program->lines[i].instr = instruction;
   }
+}
+
+void free_symbols(AssemblerCtx *ctx) {
+  StrTable *symbol_table = ctx->symbol_table;
+
+  for (size_t i = 0; i < symbol_table->size; i++) {
+    STNode *node = symbol_table->buckets[i];
+    while (node) {
+      Symbol *symbol = (Symbol *)node->value;
+      free(symbol);
+      node = node->next;
+    }
+  }
+
+  st_free(symbol_table);
+  free(symbol_table);
 }
