@@ -10,6 +10,10 @@
 
 #define MAX_ARGS 8
 
+#define UNREACHABLE(msg)                                                  \
+  fprintf(stderr, "UNREACHABLE: %s at %s:%d\n", msg, __FILE__, __LINE__); \
+  abort()
+
 typedef enum {
   LINE_ERROR,
   LINE_EMPTY,
@@ -24,36 +28,33 @@ typedef struct {
   union {
     uint8_t reg_num;
     int32_t imm_value;
-    const char *label;
+    const char *label_ref;
   };
 } Operand;
 
 typedef struct {
   LineType type;
 
+  const char *label;
   union {
-    const char *mnemonic;
-    const char *label;
+    const InstrDef *instr_def;
+    const char *directive;
   };
 
   Operand args[MAX_ARGS];
   size_t arg_count;
 
   uint32_t line_num;
+
   uint32_t address;
+  uint32_t instr;
 } TypedLine;
 
 typedef struct {
   TypedLine *lines;
   size_t count;
   size_t capacity;
-} Lines;
-
-typedef struct {
-  uint32_t *instr;
-  size_t count;
-  size_t capacity;
-} InstrBuffer;
+} Program;
 
 typedef struct {
   const char *filename;
@@ -63,7 +64,7 @@ typedef struct {
   StrTable *instr_lut;
 } AssemblerCtx;
 
-void resolve_labels(AssemblerCtx *ctx, Lines *lines);
-InstrBuffer assemble_lines(AssemblerCtx *ctx, Lines *lines);
+void resolve_labels(AssemblerCtx *ctx, Program *program);
+void assemble_lines(AssemblerCtx *ctx, Program *program);
 
 #endif // ASSEMBLER_H

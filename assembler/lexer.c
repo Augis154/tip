@@ -1,6 +1,7 @@
 #include "lexer.h"
 
 #include <stdbool.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -43,7 +44,6 @@ static TokenizedLine tokenize_line(const char *line, Arena *str_arena) {
     if (is_eol(*current)) {
       token->type = TOKEN_EOL;
       token->lexeme = "<EOL>";
-      token->lexeme_length = 5;
 
       break;
     }
@@ -52,22 +52,17 @@ static TokenizedLine tokenize_line(const char *line, Arena *str_arena) {
     case '.':
       token->type = TOKEN_DOT;
       token->lexeme = ".";
-      token->lexeme_length = 1;
 
       current++;
       continue;
     case ',':
       token->type = TOKEN_COMMA;
       token->lexeme = ",";
-      token->lexeme_length = 1;
-
       current++;
       continue;
     case ':':
       token->type = TOKEN_COLON;
       token->lexeme = ":";
-      token->lexeme_length = 1;
-
       current++;
       continue;
 
@@ -79,7 +74,6 @@ static TokenizedLine tokenize_line(const char *line, Arena *str_arena) {
 
         token->type = TOKEN_REGISTER;
         token->lexeme = arena_strndup(str_arena, current, endptr - current);
-        token->lexeme_length = endptr - current;
 
         current = endptr;
         continue;
@@ -93,7 +87,6 @@ static TokenizedLine tokenize_line(const char *line, Arena *str_arena) {
 
       token->type = TOKEN_IMMEDIATE;
       token->lexeme = arena_strndup(str_arena, current, endptr - current);
-      token->lexeme_length = endptr - current;
 
       current = endptr;
       continue;
@@ -107,14 +100,15 @@ static TokenizedLine tokenize_line(const char *line, Arena *str_arena) {
 
       token->type = TOKEN_IDENTIFIER;
       token->lexeme = arena_strndup(str_arena, start, current - start);
-      token->lexeme_length = current - start;
 
       continue;
     }
 
+    char *err_msg = arena_alloc(str_arena, 32);
+    sprintf(err_msg, "Unrecognized character: %c", *current);
+
     token->type = TOKEN_ERROR;
-    token->lexeme = arena_strndup(str_arena, current, 1);
-    token->lexeme_length = 1;
+    token->lexeme = err_msg;
 
     break;
   }

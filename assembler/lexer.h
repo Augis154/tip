@@ -26,7 +26,6 @@ typedef struct {
   TokenType type;
 
   const char *lexeme;
-  size_t lexeme_length;
 
   union {
     uint8_t reg_num;   // For registers

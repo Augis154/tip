@@ -1,4 +1,3 @@
-#include "../spec.h"
 #include "assembler.h"
 #include "instr.h"
 #include "lexer.h"
@@ -60,11 +59,11 @@ int main(int argc, char *argv[]) {
   //   printf("\n");
   // }
 
-  Lines lines = parse_lines(&ctx, &tokenized_file);
+  Program program = parse_lines(&ctx, &tokenized_file);
 
-  resolve_labels(&ctx, &lines);
+  resolve_labels(&ctx, &program);
 
-  InstrBuffer buffer = assemble_lines(&ctx, &lines);
+  assemble_lines(&ctx, &program);
 
   FILE *lst_file = fopen("output.lst", "w");
   if (!lst_file) {
@@ -72,23 +71,22 @@ int main(int argc, char *argv[]) {
     return 1;
   }
 
-  size_t instr_idx = 0;
-  for (size_t i = 0; i < lines.count; i++) {
-    TypedLine line = lines.lines[i];
-    uint32_t instruction = buffer.instr[instr_idx];
+  for (size_t i = 0; i < program.count; i++) {
+    TypedLine line = program.lines[i];
+    uint32_t instruction = program.lines[i].instr;
 
     if (line.type != LINE_INSTR) {
       continue;
     }
 
     fprintf(lst_file, "%04X: %032b    ", line.address * 4, instruction);
-    fprintf(lst_file, "%s", line.mnemonic);
+    fprintf(lst_file, "%s", line.instr_def->mnemonic);
 
     for (size_t j = 0; j < line.arg_count; j++) {
       Operand arg = line.args[j];
       switch (arg.type) {
       case OPT_REG:
-        fprintf(lst_file, " R%u", arg.reg_num);
+        fprintf(lst_file, " r%u", arg.reg_num);
         break;
       case OPT_IMM:
         fprintf(lst_file, " %d", arg.imm_value);
@@ -99,8 +97,9 @@ int main(int argc, char *argv[]) {
     }
 
     fprintf(lst_file, "\n");
-    instr_idx++;
   }
+
+  fclose(lst_file);
 
   FILE *output_file = fopen("output.bin", "wb");
   if (!output_file) {
@@ -108,8 +107,8 @@ int main(int argc, char *argv[]) {
     return 1;
   }
 
-  for (size_t i = 0; i < buffer.count; i++) {
-    uint32_t instruction = buffer.instr[i];
+  for (size_t i = 0; i < program.count; i++) {
+    uint32_t instruction = program.lines[i].instr;
     fwrite(&instruction, sizeof(instruction), 1, output_file);
   }
 
@@ -163,7 +162,7 @@ int main(int argc, char *argv[]) {
   //   }
   // }
 
-  free_lines(&lines);
+  free_program(&program);
 
   arena_free(&str_arena);
 

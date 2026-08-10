@@ -67,7 +67,7 @@ static TypedLine parse_instruction(AssemblerCtx *ctx, TokenizedLine *tokenized_l
   }
 
   typed_line.type = LINE_INSTR;
-  typed_line.mnemonic = mnemonic;
+  typed_line.instr_def = instr_def;
 
   token_idx++;
 
@@ -95,7 +95,7 @@ static TypedLine parse_instruction(AssemblerCtx *ctx, TokenizedLine *tokenized_l
       break;
 
     case TOKEN_IDENTIFIER:
-      typed_line.args[i] = (Operand){.type = OPT_LABEL, .label = token->lexeme};
+      typed_line.args[i] = (Operand){.type = OPT_LABEL, .label_ref = token->lexeme};
       break;
 
     default:
@@ -122,56 +122,73 @@ static TypedLine parse_instruction(AssemblerCtx *ctx, TokenizedLine *tokenized_l
 }
 
 static TypedLine parse_line(AssemblerCtx *ctx, TokenizedLine *tokenized_line) {
-  if (tokenized_line->count == 0 || (tokenized_line->count == 1 && tokenized_line->tokens[0].type == TOKEN_EOL)) {
-    TypedLine empty_line = {
-      .line_num = tokenized_line->line_num,
-      .type = LINE_EMPTY,
-    };
-    return empty_line;
+  TypedLine line = {
+    .line_num = tokenized_line->line_num,
+    .type = LINE_EMPTY,
+  };
+
+  if (tokenized_line->count == 0) {
+    return line;
   }
 
   Token *tokens = tokenized_line->tokens;
+  size_t token_idx = 0;
 
-  if (tokens[0].type == TOKEN_IDENTIFIER && tokenized_line->count > 1 && tokens[1].type == TOKEN_COLON) {
-    TypedLine label_line = {
-      .line_num = tokenized_line->line_num,
-      .type = LINE_LABEL,
-      .label = tokens[0].lexeme,
-    };
-    return label_line;
-  }
+  switch (tokens[token_idx].type) {
+  case TOKEN_EOL:
+    return line;
 
-  if (tokens[0].type == TOKEN_IDENTIFIER) {
+  case TOKEN_ERROR:
+    return error_line(tokenized_line->line_num, "Lexical error: %s\n", tokens[token_idx].lexeme);
+
+  case TOKEN_DOT:
+    if (tokens[token_idx + 1].type != TOKEN_IDENTIFIER) {
+      return error_line(tokenized_line->line_num, "Expected directive after '.'\n");
+    }
+
+    line.type = LINE_DIRECTIVE;
+    line.directive = tokens[token_idx + 1].lexeme;
+
+    return line;
+
+  case TOKEN_IDENTIFIER:
+    if (tokens[token_idx + 1].type == TOKEN_COLON) {
+      line.type = LINE_LABEL;
+      line.label = tokens[token_idx].lexeme;
+
+      return line;
+    }
     return parse_instruction(ctx, tokenized_line);
-  }
 
-  return error_line(tokenized_line->line_num, "Unexpected token type\n");
+  default:
+    return error_line(tokenized_line->line_num, "Unexpected token type\n");
+  }
 }
 
-static void add_line(Lines *lines, TypedLine line) {
-  if (lines->count >= lines->capacity) {
-    size_t new_capacity = lines->capacity == 0 ? 256 : lines->capacity * 2;
-    lines->lines = realloc(lines->lines, new_capacity * sizeof(TypedLine));
-    lines->capacity = new_capacity;
+static void add_line(Program *program, TypedLine line) {
+  if (program->count >= program->capacity) {
+    size_t new_capacity = program->capacity == 0 ? 256 : program->capacity * 2;
+    program->lines = realloc(program->lines, new_capacity * sizeof(TypedLine));
+    program->capacity = new_capacity;
   }
-  lines->lines[lines->count++] = line;
+  program->lines[program->count++] = line;
 }
 
-Lines parse_lines(AssemblerCtx *ctx, TokenizedFile *tokenized_file) {
-  Lines lines = {0};
+Program parse_lines(AssemblerCtx *ctx, TokenizedFile *tokenized_file) {
+  Program program = {0};
 
   for (size_t i = 0; i < tokenized_file->count; i++) {
     TypedLine parsed_line = parse_line(ctx, &tokenized_file->lines[i]);
 
-    add_line(&lines, parsed_line);
+    add_line(&program, parsed_line);
   }
 
-  return lines;
+  return program;
 }
 
-void free_lines(Lines *lines) {
-  free(lines->lines);
-  lines->lines = NULL;
-  lines->count = 0;
-  lines->capacity = 0;
+void free_program(Program *program) {
+  free(program->lines);
+  program->lines = NULL;
+  program->count = 0;
+  program->capacity = 0;
 }

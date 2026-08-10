@@ -9,7 +9,7 @@
 #include <stdint.h>
 #include <stdio.h>
 
-Lines parse_lines(AssemblerCtx *ctx, TokenizedFile *tokenized_file);
-void free_lines(Lines *lines);
+Program parse_lines(AssemblerCtx *ctx, TokenizedFile *tokenized_file);
+void free_program(Program *program);
 
 #endif // PARSER_H
