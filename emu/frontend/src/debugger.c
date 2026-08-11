@@ -74,6 +74,13 @@ void handle_debug(struct cpu *cpu, int *state) {
     if(CMD("step")) {
         step(cpu);
     }
+    if(CMD("help")){
+        fprintf(stderr, "Supported commands: \n");
+        fprintf(stderr, "- step \n");
+        fprintf(stderr, "- run \n");
+        fprintf(stderr, "- gr u|i|x [register number] \n");
+        fprintf(stderr, "- wr [register number] [register value] \n");
+    }
     else if (CMD("run"))
     {
         if (!getenv("DEBUG"))
