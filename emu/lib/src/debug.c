@@ -52,22 +52,22 @@ static char *decode_fn_ctrl(uint8_t fn4){
     }
 }
 
-static void decode_common(uint8_t tag4, uint8_t fn4) {
+static void decode_common(struct cpu *cpu, uint8_t tag4, uint8_t fn4) {
     char *tagname = decode_tag(tag4);
     char *fn_name = decode_fn(fn4);
-    fprintf(stderr, "%s %s ", tagname, fn_name);
+    fprintf(stderr, "0x%x: %s %s ", cpu->pc, tagname, fn_name);
 };
 
-static void decode_common_control(uint8_t tag4, uint8_t fn4) {
+static void decode_common_control(struct cpu *cpu, uint8_t tag4, uint8_t fn4) {
     char *tagname = decode_tag(tag4);
     char *fn_name = decode_fn_ctrl(fn4);
-    fprintf(stderr, "%s %s ", tagname, fn_name);
+    fprintf(stderr, "0x%x: %s %s ", cpu->pc, tagname, fn_name);
 };
 
 static void decode_r(struct cpu *cpu, uint32_t instruction, uint8_t tag4, uint8_t fn4) {
     (void)cpu;
     (void)instruction;
-    decode_common(tag4, fn4);
+    decode_common(cpu, tag4, fn4);
     uint8_t rd = (instruction >> POS_RD) & MASK_REG;
     uint8_t r1 = (instruction >> POS_R1) & MASK_REG;
     uint8_t r2 = (instruction >> POS_R2) & MASK_REG;
@@ -92,7 +92,7 @@ static void decode_r(struct cpu *cpu, uint32_t instruction, uint8_t tag4, uint8_
 static void decode_i(struct cpu *cpu, uint32_t instruction, uint8_t tag4, uint8_t fn4) {
     (void)cpu;
     (void)instruction;
-    decode_common(tag4, fn4);
+    decode_common(cpu, tag4, fn4);
     uint8_t rd = (instruction >> POS_RD) & MASK_REG;
     uint8_t r1 = (instruction >> POS_R1) & MASK_REG;
     uint16_t imm = (instruction >> POS_IMM14) & MASK_IMM14;
@@ -102,7 +102,7 @@ static void decode_i(struct cpu *cpu, uint32_t instruction, uint8_t tag4, uint8_
 static void decode_is(struct cpu *cpu, uint32_t instruction, uint8_t tag4, uint8_t fn4) {
     (void)cpu;
     (void)instruction;
-    decode_common(tag4, fn4);
+    decode_common(cpu, tag4, fn4);
     uint8_t rd = (instruction >> POS_RD) & MASK_REG;
     uint8_t r1 = (instruction >> POS_R1) & MASK_REG;
     uint8_t shamt = (instruction >> POS_SHAMT) & MASK_SHAMT;
@@ -123,7 +123,7 @@ static void decode_is(struct cpu *cpu, uint32_t instruction, uint8_t tag4, uint8
 static void decode_s(struct cpu *cpu, uint32_t instruction, uint8_t tag4, uint8_t fn4) {
     (void)cpu;
     (void)instruction;
-    decode_common_control(tag4, fn4);
+    decode_common_control(cpu, tag4, fn4);
     uint8_t r1 = (instruction >> POS_R1) & MASK_REG;
     uint8_t r2 = (instruction >> POS_R2) & MASK_REG;
     uint8_t imm4_0 = (instruction >> POS_IMM4_0) & MASK_IMM4_0;
@@ -137,7 +137,7 @@ static void decode_s(struct cpu *cpu, uint32_t instruction, uint8_t tag4, uint8_
 static void decode_u(struct cpu *cpu, uint32_t instruction, uint8_t tag4, uint8_t fn4) {
     (void)cpu;
     (void)instruction;
-    decode_common(tag4, fn4);
+    decode_common(cpu, tag4, fn4);
     uint8_t rd = (instruction >> POS_RD) & MASK_REG;
     uint32_t imm = (instruction >> POS_IMM19) & MASK_IMM19;
     fprintf(stderr, "rd: %d, imm: %d\n", rd, imm);

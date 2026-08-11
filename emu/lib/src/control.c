@@ -5,7 +5,7 @@
 #define CONTROL_OP(opc, compare, val) \
 case opc: \
     if (get_register(cpu, r1) compare get_register(cpu, r2)) \
-        cpu->pc += val << 2; \
+        cpu->pc += (val << 2) - 4; \
     break;
 
 void decode_control(struct cpu *cpu, uint32_t instruction, uint8_t fn4){

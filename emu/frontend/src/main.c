@@ -1,6 +1,8 @@
-#include<stdio.h>
-#include"cpu.h"
-#include"spec.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <signal.h>
+#include "cpu.h"
+#include "spec.h"
 
 #define R_TYPE(tag, fn4, rd, r1, r2, fn9) tag | (fn4 << POS_FN) | (rd << POS_RD) | (r1 << POS_R1) | (r2 << POS_R2) | (fn9 << POS_FN9)
 #define I_TYPE(tag, fn4, rd, r1, imm) tag | (fn4 << POS_FN) | (rd << POS_RD) | (r1 << POS_R1) | (imm << POS_IMM14)
@@ -14,17 +16,30 @@ uint32_t bootrom[0xFFC/4] = {
     I_TYPE(TAG_LOAD, MEM_WORD, 1, 0, 270),
 };
 
+int execState = 0;
+
+void sigHandler(int signum){
+    if(signum == SIGINT) {
+        if(execState < 1)
+            execState++;
+        else
+            exit(1);
+        // pause execution
+    }
+}
+
 int main()
 {
     struct cpu cpu;
     init_cpu(&cpu, 4096*2);
     FILE *file = fopen("../output.bin", "rb");
-    fgets(cpu.memory, 4092, file);
+    fread(cpu.memory, 1, 4092, file);
     fclose(file);
     cpu.R[1] = 5;
     cpu.R[2] = 10;
     // *(uint32_t *)(cpu.memory + RESET_VECTOR) = 0b00000000000010000010001100000000;
     *(uint32_t *)(cpu.memory + RESET_VECTOR) = I_TYPE(TAG_CTRL, CTRL_JASR, 0, 0, 0);
+    signal(SIGINT, sigHandler); 
     while(1)
         step(&cpu);
     // uint32_t memory_ptr = *(uint32_t *)(cpu.memory + RESET_VECTOR);
