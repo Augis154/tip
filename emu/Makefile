@@ -13,8 +13,6 @@ endif
 
 frontend: libcpu.so
 	$(MAKE) -C frontend 
-	cp frontend/frontend build/frontend
-	cp lib/libcpu.so build/libcpu.so
 
 libcpu.so:
 	$(MAKE) -C lib
