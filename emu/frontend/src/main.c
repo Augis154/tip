@@ -1,6 +1,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <signal.h>
+#include <string.h>
+#include "debugger.h"
 #include "cpu.h"
 #include "spec.h"
 
@@ -24,7 +26,7 @@ void sigHandler(int signum){
             execState++;
         else
             exit(1);
-        // pause execution
+        fprintf(stderr, "Execution paused.\n");
     }
 }
 
@@ -32,6 +34,12 @@ int main()
 {
     struct cpu cpu;
     init_cpu(&cpu, 4096*2);
+    #ifdef DEBUG
+    cpu.debug = 1;
+    #endif
+    if (getenv("DEBUG")) {
+        cpu.debug = 1;
+    }
     FILE *file = fopen("../output.bin", "rb");
     fread(cpu.memory, 1, 4092, file);
     fclose(file);
@@ -40,8 +48,13 @@ int main()
     // *(uint32_t *)(cpu.memory + RESET_VECTOR) = 0b00000000000010000010001100000000;
     *(uint32_t *)(cpu.memory + RESET_VECTOR) = I_TYPE(TAG_CTRL, CTRL_JASR, 0, 0, 0);
     signal(SIGINT, sigHandler); 
-    while(1)
-        step(&cpu);
+    while(1) {
+        if(execState == 0) {
+            step(&cpu);
+            continue;            
+        }
+        handle_debug(&cpu, &execState);
+    }
     // uint32_t memory_ptr = *(uint32_t *)(cpu.memory + RESET_VECTOR);
     // printf("Hello World!! %u\n", memory_ptr);
     printf("Hello World!! %u\n", cpu.pc);

@@ -3,9 +3,7 @@
 #include "dataop.h"
 #include "control.h"
 #include "cpu.h"
-#ifdef DEBUG
 #include "debug.h"
-#endif
 #include <stdlib.h>
 
 void init_cpu(struct cpu *cpu, uint32_t memory_size)
@@ -73,13 +71,14 @@ uint32_t get_register(struct cpu *cpu, uint8_t reg_num)
     return cpu->R[reg_num];
 }
 
-void write_register(struct cpu *cpu, uint8_t reg_num, uint32_t value)
+int write_register(struct cpu *cpu, uint8_t reg_num, uint32_t value)
 {
     if (reg_num >= 32) {
         fprintf(stderr, "Register number out of bounds: %u\n", reg_num);
-        exit(1);
+        return 0;
     }
     cpu->R[reg_num] = value;
+    return 1;
 }
 
 static void (*instruction_decoders[0xF])(struct cpu *cpu, uint32_t instruction, uint8_t fn4) = {
@@ -99,9 +98,8 @@ void step(struct cpu *cpu)
     uint8_t tag4 = (instruction >> POS_TAG) & MASK_TAG;
     uint8_t fn4 = (instruction >> POS_FN) & MASK_FN;
     
-    #ifdef DEBUG
-    print_instr(cpu, instruction);
-    #endif
+    if (cpu->debug)
+        print_instr(cpu, instruction);
 
     void (*decoder)(struct cpu *, uint32_t, uint8_t) = instruction_decoders[tag4];
     if (decoder) {
