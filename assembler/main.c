@@ -79,7 +79,9 @@ int main(int argc, char *argv[]) {
       continue;
     }
 
-    fprintf(lst_file, "%04X: %032b    ", line.address * 4, instruction);
+    fprintf(lst_file, "%04X: ", line.address * 4);
+    fprintf(lst_file, "%08X    ", instruction);
+    fprintf(lst_file, "%032b    ", instruction);
     fprintf(lst_file, "%s", line.instr_def->mnemonic);
 
     for (size_t j = 0; j < line.arg_count; j++) {
@@ -89,7 +91,7 @@ int main(int argc, char *argv[]) {
         fprintf(lst_file, " r%u", arg.reg_num);
         break;
       case OPT_IMM:
-        fprintf(lst_file, " %d", arg.imm_value);
+        fprintf(lst_file, " %#x (%d)", (uint32_t)arg.imm_value, (int32_t)arg.imm_value);
         break;
       default:
         break;

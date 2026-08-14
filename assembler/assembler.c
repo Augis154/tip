@@ -25,7 +25,11 @@ void resolve_labels(AssemblerCtx *ctx, Program *program) {
 
     Symbol *existing_symbol = st_get(ctx->symbol_table, line.label);
     if (existing_symbol) {
-      fprintf(stderr, "[Line %u] Error: Duplicate label '%s'\n", line.line_num, line.label);
+      fprintf(stderr,
+              "[Line %u] Error: Duplicate label '%s', Previously defined at line %u\n",
+              line.line_num,
+              line.label,
+              existing_symbol->line_defined);
       continue;
     }
 
@@ -78,11 +82,10 @@ void assemble_lines(AssemblerCtx *ctx, Program *program) {
     const InstrDef *instr_def = line->instr_def;
 
     uint32_t instruction = 0;
+    uint8_t opcode = instr_def->opcode & MASK_OP;
 
     switch (instr_def->format) {
     case FORMAT_R: {
-      uint8_t opcode = instr_def->opcode & MASK_OP;
-
       uint8_t rd = line->args[0].reg_num & MASK_REG;
       uint8_t r1 = line->args[1].reg_num & MASK_REG;
       uint8_t r2 = line->args[2].reg_num & MASK_REG;
@@ -93,8 +96,6 @@ void assemble_lines(AssemblerCtx *ctx, Program *program) {
       break;
     }
     case FORMAT_I: {
-      uint8_t opcode = instr_def->opcode & MASK_OP;
-
       uint8_t rd = line->args[0].reg_num & MASK_REG;
       uint8_t r1 = line->args[1].reg_num & MASK_REG;
       int32_t imm = line->args[2].imm_value & MASK_IMM14;
@@ -103,8 +104,6 @@ void assemble_lines(AssemblerCtx *ctx, Program *program) {
       break;
     }
     case FORMAT_IS: {
-      uint8_t opcode = instr_def->opcode & MASK_OP;
-
       uint8_t rd = line->args[0].reg_num & MASK_REG;
       uint8_t r1 = line->args[1].reg_num & MASK_REG;
       int32_t shamt = line->args[2].imm_value & MASK_SHAMT;
@@ -115,8 +114,6 @@ void assemble_lines(AssemblerCtx *ctx, Program *program) {
       break;
     }
     case FORMAT_S: {
-      uint8_t opcode = instr_def->opcode & MASK_OP;
-
       uint8_t r1 = line->args[0].reg_num & MASK_REG;
       uint8_t r2 = line->args[1].reg_num & MASK_REG;
       int32_t imm = line->args[2].imm_value & MASK_IMM14;
@@ -128,8 +125,6 @@ void assemble_lines(AssemblerCtx *ctx, Program *program) {
       break;
     }
     case FORMAT_U: {
-      uint8_t opcode = instr_def->opcode & MASK_OP;
-
       uint8_t rd = line->args[0].reg_num & MASK_REG;
       int32_t imm = line->args[1].imm_value & MASK_IMM19;
 

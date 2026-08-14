@@ -20,6 +20,8 @@
 #define CTRL(mnemonic, fn, format) {mnemonic, format, OPCODE(TAG_CTRL, fn), 0}
 #define UPPER(mnemonic, fn) {mnemonic, FORMAT_U, OPCODE(TAG_UPPER, fn), 0}
 
+#define SYS(mnemonic, fn) {mnemonic, FORMAT_I, OPCODE(TAG_SYS, fn), 0}
+
 static const FormatRule format_rules[FORMAT_RULES_TABLE_SIZE];
 static const InstrDef instr_table[INSTR_TABLE_SIZE];
 
@@ -124,6 +126,14 @@ static const InstrDef instr_table[INSTR_TABLE_SIZE] = {
   // Upper Instructions
   UPPER("lui", UPPER_LUI),
   UPPER("lupc", UPPER_LUPC),
+
+  // System Instructions
+  SYS("scall", SYS_SCALL),
+  SYS("sbreak", SYS_SBREAK),
+  SYS("sret", SYS_SRET),
+  SYS("srw", SYS_SRW),
+  SYS("srs", SYS_SRS),
+  SYS("src", SYS_SRC),
 
   {NULL} // Sentinel value to mark the end of the table
 };
