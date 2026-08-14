@@ -72,9 +72,37 @@ typedef enum {
 } UpperOp;
 
 typedef enum {
-  SYS_ECALL = 0b0000,
-  SYS_EBREAK = 0b0001,
+  SYS_SCALL = 0b0000,
+  SYS_SBREAK = 0b0001,
+  SYS_SRET = 0b0010,
+  SYS_SRW = 0b0100,
+  SYS_SRS = 0b0101,
+  SYS_SRC = 0b0110,
 } SysOp;
+
+typedef enum {
+  SR_CYCLE = 0x10,
+  SR_CYCLEH = 0x11,
+
+  SR_STS = 0x40,
+  SR_STH = 0x41,
+
+  SR_STPC = 0x51,
+  SR_STC = 0x52,
+  SR_STV = 0x53,
+} SysReg;
+
+typedef enum {
+  STC_NONE = 0b0000,
+  STC_INSTR_MISALIGNED = 0b0001,
+  STC_INSTR_FAULT = 0b0010,
+  STC_DATA_MISALIGNED = 0b0011,
+  STC_DATA_FAULT = 0b0100,
+  STC_ILLEGAL_INSTR = 0b0101,
+  STC_SCALL = 0b1000,
+  STC_SBREAK = 0b1001,
+  STC_ALU_ERROR = 0b1100,
+} TrapCause;
 
 #define RESET_VECTOR 0xFFC
 
@@ -87,6 +115,12 @@ typedef enum {
 #define POS_IMM19 13
 #define POS_SHAMT 18
 #define POS_FN9 23
+
+// STS register bit positions
+#define POS_STS_SIE 0
+#define POS_STS_SMODE 1
+#define POS_STS_PIE 2
+#define POS_STS_PMODE 3
 
 #define MASK_TAG 0xF // 4 bits
 #define MASK_FN 0xF  // 4 bits
