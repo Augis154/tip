@@ -20,7 +20,7 @@
 #define CTRL(mnemonic, fn, format) {mnemonic, format, OPCODE(TAG_CTRL, fn), 0}
 #define UPPER(mnemonic, fn) {mnemonic, FORMAT_U, OPCODE(TAG_UPPER, fn), 0}
 
-#define SYS(mnemonic, fn) {mnemonic, FORMAT_I, OPCODE(TAG_SYS, fn), 0}
+#define SYS(mnemonic, fn, format) {mnemonic, format, OPCODE(TAG_SYS, fn), 0}
 
 static const FormatRule format_rules[FORMAT_RULES_TABLE_SIZE];
 static const InstrDef instr_table[INSTR_TABLE_SIZE];
@@ -58,6 +58,8 @@ static const FormatRule format_rules[FORMAT_RULES_TABLE_SIZE] = {
   [FORMAT_IS] = {3, {OPT_REG, OPT_REG, OPT_IMM}},
   [FORMAT_S] = {3, {OPT_REG, OPT_REG, OPT_IMM | OPT_LABEL}},
   [FORMAT_U] = {2, {OPT_REG, OPT_IMM | OPT_LABEL}},
+
+  [FORMAT_NONE] = {0, {0}},
 };
 
 static const InstrDef instr_table[INSTR_TABLE_SIZE] = {
@@ -128,12 +130,12 @@ static const InstrDef instr_table[INSTR_TABLE_SIZE] = {
   UPPER("lupc", UPPER_LUPC),
 
   // System Instructions
-  SYS("scall", SYS_SCALL),
-  SYS("sbreak", SYS_SBREAK),
-  SYS("sret", SYS_SRET),
-  SYS("srw", SYS_SRW),
-  SYS("srs", SYS_SRS),
-  SYS("src", SYS_SRC),
+  SYS("scall", SYS_SCALL, FORMAT_NONE),
+  SYS("sbreak", SYS_SBREAK, FORMAT_NONE),
+  SYS("sret", SYS_SRET, FORMAT_NONE),
+  SYS("srw", SYS_SRW, FORMAT_I),
+  SYS("srs", SYS_SRS, FORMAT_I),
+  SYS("src", SYS_SRC, FORMAT_I),
 
   {NULL} // Sentinel value to mark the end of the table
 };

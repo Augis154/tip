@@ -11,6 +11,8 @@ typedef enum {
   FORMAT_IS, // For shift instructions
   FORMAT_S,
   FORMAT_U,
+
+  FORMAT_NONE, // I type with no operands
   FORMAT_ALIAS,
 } Format;
 

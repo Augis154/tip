@@ -95,6 +95,7 @@ void assemble_lines(AssemblerCtx *ctx, Program *program) {
       instruction = (opcode) | (rd << POS_RD) | (r1 << POS_R1) | (r2 << POS_R2) | (ext << POS_FN9);
       break;
     }
+    case FORMAT_NONE:
     case FORMAT_I: {
       uint8_t rd = line->args[0].reg_num & MASK_REG;
       uint8_t r1 = line->args[1].reg_num & MASK_REG;
