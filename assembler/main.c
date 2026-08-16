@@ -73,35 +73,70 @@ int main(int argc, char *argv[]) {
 
   for (size_t i = 0; i < program.count; i++) {
     TypedLine line = program.lines[i];
-    uint32_t instruction = program.lines[i].instr;
 
-    if (line.type != LINE_INSTR) {
+    uint8_t *bytes = program.lines[i].bytes;
+    size_t byte_count = program.lines[i].byte_count;
+
+    switch (line.type) {
+    case LINE_ERROR:
+    case LINE_EMPTY:
       continue;
+
+    case LINE_LABEL:
+      // fprintf(lst_file, "\n%04X: ", line.address);
+      fprintf(lst_file, "\n%s:\n", line.label);
+      continue;
+
+    case LINE_DIRECTIVE: {
+      // fprintf(lst_file, "%04X: ", line.address);
+      fprintf(lst_file, "\n.%s", line.directive_def->name);
+
+      for (size_t j = 0; j < line.arg_count; j++) {
+        Operand arg = line.args[j];
+        switch (arg.type) {
+        case OPT_REG:
+          fprintf(lst_file, " r%u", arg.reg_num);
+          break;
+        case OPT_IMM:
+          fprintf(lst_file, " %#x (%d)", (uint32_t)arg.imm_value, (int32_t)arg.imm_value);
+          break;
+        default:
+          break;
+        }
+      }
+      break;
     }
 
-    fprintf(lst_file, "%04X: ", line.address * 4);
-    fprintf(lst_file, "%08X    ", instruction);
-    fprintf(lst_file, "%032b    ", instruction);
-    fprintf(lst_file, "%s", line.instr_def->mnemonic);
+    case LINE_INSTR: {
+      uint32_t instruction = program.lines[i].instruction;
 
-    for (size_t j = 0; j < line.arg_count; j++) {
-      Operand arg = line.args[j];
-      switch (arg.type) {
-      case OPT_REG:
-        fprintf(lst_file, " r%u", arg.reg_num);
-        break;
-      case OPT_IMM:
-        fprintf(lst_file, " %#x (%d)", (uint32_t)arg.imm_value, (int32_t)arg.imm_value);
-        break;
-      default:
-        break;
+      fprintf(lst_file, "%04X: ", line.address);
+      fprintf(lst_file, "%08X    ", instruction);
+      fprintf(lst_file, "%032b    ", instruction);
+      fprintf(lst_file, "%s", line.instr_def->mnemonic);
+
+      for (size_t j = 0; j < line.arg_count; j++) {
+        Operand arg = line.args[j];
+        switch (arg.type) {
+        case OPT_REG:
+          fprintf(lst_file, " r%u", arg.reg_num);
+          break;
+        case OPT_IMM:
+          fprintf(lst_file, " %#x (%d)", (uint32_t)arg.imm_value, (int32_t)arg.imm_value);
+          break;
+        default:
+          break;
+        }
       }
+      break;
+    }
     }
 
     fprintf(lst_file, "\n");
   }
 
   fclose(lst_file);
+  printf("Generated output.lst\n");
 
   FILE *output_file = fopen("output.bin", "wb");
   if (!output_file) {
@@ -109,16 +144,29 @@ int main(int argc, char *argv[]) {
     return 1;
   }
 
+  uint32_t bytes_written = 0;
   for (size_t i = 0; i < program.count; i++) {
-    uint32_t instruction = program.lines[i].instr;
-    fwrite(&instruction, sizeof(instruction), 1, output_file);
+    TypedLine line = program.lines[i];
+
+    if (line.address > bytes_written) {
+      uint32_t padding = line.address - bytes_written;
+      uint8_t *zero_bytes = calloc(padding, sizeof(uint8_t));
+      fwrite(zero_bytes, sizeof(uint8_t), padding, output_file);
+      free(zero_bytes);
+      bytes_written += padding;
+    }
+
+    uint8_t *bytes = line.bytes;
+    size_t byte_count = line.byte_count;
+    fwrite(bytes, sizeof(uint8_t), byte_count, output_file);
+    bytes_written += byte_count;
   }
 
   fclose(output_file);
   printf("Output written to output.bin\n");
 
-  // for (size_t i = 0; i < lines.count; i++) {
-  //   TypedLine line = lines.lines[i];
+  // for (size_t i = 0; i < program.count; i++) {
+  //   TypedLine line = program.lines[i];
 
   //   switch (line.type) {
   //   case LINE_ERROR:
@@ -126,14 +174,15 @@ int main(int argc, char *argv[]) {
   //     break;
 
   //   case LINE_EMPTY:
-  //     printf("Line %u: Empty\n", line.line_num);
+  //     // printf("Line %u: Empty\n", line.line_num);
   //     break;
 
   //   case LINE_LABEL:
   //     printf("Line %u: Label: %s\n", line.line_num, line.label);
   //     break;
+
   //   case LINE_INSTR:
-  //     printf("Line %u: Instruction: %s", line.line_num, line.mnemonic);
+  //     printf("Line %u: Instruction: %s", line.line_num, line.instr_def->mnemonic);
 
   //     for (size_t j = 0; j < line.arg_count; j++) {
   //       Operand arg = line.args[j];
@@ -142,10 +191,10 @@ int main(int argc, char *argv[]) {
   //         printf(" [R%u]", arg.reg_num);
   //         break;
   //       case OPT_IMM:
-  //         printf(" [Immediate %d]", arg.imm_value);
+  //         printf(" [Immediate %#x]", arg.imm_value);
   //         break;
   //       case OPT_LABEL:
-  //         printf(" [Label %s]", arg.label);
+  //         printf(" [Label %s]", arg.label_ref);
   //         break;
   //       default:
   //         break;
@@ -156,7 +205,27 @@ int main(int argc, char *argv[]) {
 
   //     break;
   //   case LINE_DIRECTIVE:
-  //     printf("Line %u: Directive: %s\n", line.line_num, line.mnemonic);
+  //     printf("Line %u: Directive: %s", line.line_num, line.directive_def->name);
+
+  //     for (size_t j = 0; j < line.arg_count; j++) {
+  //       Operand arg = line.args[j];
+  //       switch (arg.type) {
+  //       case OPT_REG:
+  //         printf(" [R%u]", arg.reg_num);
+  //         break;
+  //       case OPT_IMM:
+  //         printf(" [Immediate %#x]", arg.imm_value);
+  //         break;
+  //       case OPT_LABEL:
+  //         printf(" [Label %s]", arg.label_ref);
+  //         break;
+  //       default:
+  //         break;
+  //       }
+  //     }
+
+  //     printf("\n");
+
   //     break;
   //   default:
   //     printf("Line %u: Unknown line type\n", line.line_num);

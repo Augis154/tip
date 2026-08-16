@@ -37,6 +37,31 @@ void arena_free(Arena *a) {
   a->current = NULL;
 }
 
+ArenaMark arena_mark(Arena *a) {
+  return (ArenaMark){.block = a->current, .used = a->current ? a->current->used : 0};
+}
+
+void arena_rollback(Arena *a, ArenaMark mark) {
+  if (!a->first) {
+    return;
+  }
+
+  ArenaBlock *curr = mark.block ? mark.block->next : a->first;
+  while (curr) {
+    ArenaBlock *next = curr->next;
+    free(curr);
+    curr = next;
+  }
+
+  a->current = mark.block;
+  if (a->current) {
+    a->current->used = mark.used;
+    a->current->next = NULL;
+  } else {
+    a->first = NULL;
+  }
+}
+
 char *arena_strdup(Arena *a, const char *str) {
   size_t len = strlen(str);
   char *copy = arena_alloc(a, len + 1);

@@ -13,7 +13,7 @@ typedef enum {
   FORMAT_U,
 
   FORMAT_NONE, // I type with no operands
-  FORMAT_ALIAS,
+  FORMAT_COUNT,
 } Format;
 
 typedef enum {
@@ -31,8 +31,8 @@ typedef struct {
 } InstrDef;
 
 typedef struct {
-  uint8_t op_count;
-  uint8_t types[3];
+  uint8_t arg_count;
+  uint8_t arg_types[3];
 } FormatRule;
 
 StrTable *instr_create_lut();

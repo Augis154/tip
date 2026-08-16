@@ -22,6 +22,20 @@ typedef enum {
   LINE_DIRECTIVE,
 } LineType;
 
+typedef enum {
+  SYM_LABEL,
+  SYM_CONSTANT,
+} SymbolType;
+
+typedef struct {
+  const char *filename;
+
+  Arena *str_arena;
+
+  StrTable *instr_lut;
+  StrTable *symbol_table;
+} AssemblerCtx;
+
 typedef struct {
   OperandType type;
 
@@ -33,26 +47,48 @@ typedef struct {
 } Operand;
 
 typedef struct {
-  uint32_t address;
+  SymbolType type;
+
+  union {
+    uint32_t address;
+    int32_t value;
+  };
+
   uint32_t line_defined;
 } Symbol;
 
+typedef struct _TypedLine TypedLine;
+
+typedef void (*DirectiveLayoutFunc)(AssemblerCtx *ctx, TypedLine *line, uint32_t *current_address);
+typedef void (*DirectiveEmitFunc)(AssemblerCtx *ctx, TypedLine *line);
+
 typedef struct {
+  char *name;
+  DirectiveLayoutFunc layout;
+  DirectiveEmitFunc emit;
+
+  int8_t arg_count;
+  uint8_t arg_types[4];
+} DirectiveDef;
+
+typedef struct _TypedLine {
   LineType type;
 
   const char *label;
   union {
     const InstrDef *instr_def;
-    const char *directive;
+    const DirectiveDef *directive_def;
   };
 
   Operand args[MAX_ARGS];
   size_t arg_count;
 
   uint32_t line_num;
-
   uint32_t address;
-  uint32_t instr;
+  uint32_t instruction;
+
+  uint8_t *bytes;
+  size_t byte_count;
 } TypedLine;
 
 typedef struct {
@@ -60,15 +96,6 @@ typedef struct {
   size_t count;
   size_t capacity;
 } Program;
-
-typedef struct {
-  const char *filename;
-
-  Arena *str_arena;
-
-  StrTable *instr_lut;
-  StrTable *symbol_table;
-} AssemblerCtx;
 
 void resolve_labels(AssemblerCtx *ctx, Program *program);
 void assemble_lines(AssemblerCtx *ctx, Program *program);

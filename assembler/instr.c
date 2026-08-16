@@ -6,7 +6,6 @@
 #include <stdlib.h>
 
 #define INSTR_TABLE_SIZE 128
-#define FORMAT_RULES_TABLE_SIZE 8
 
 #define OPCODE(tag, fn) ((uint8_t)(((tag) | (fn) << POS_FN) & MASK_OP))
 
@@ -22,8 +21,8 @@
 
 #define SYS(mnemonic, fn, format) {mnemonic, format, OPCODE(TAG_SYS, fn), 0}
 
-static const FormatRule format_rules[FORMAT_RULES_TABLE_SIZE];
-static const InstrDef instr_table[INSTR_TABLE_SIZE];
+static const FormatRule format_rules[];
+static const InstrDef instr_table[];
 
 StrTable *instr_create_lut() {
   StrTable *instr_lut = malloc(sizeof(StrTable));
@@ -46,13 +45,13 @@ const InstrDef *instr_lookup(StrTable *instr_lut, const char *mnemonic) {
 }
 
 const FormatRule *format_rule_lookup(Format format) {
-  if (format < FORMAT_R || format >= FORMAT_ALIAS) {
+  if (format < FORMAT_R || format >= FORMAT_COUNT) {
     return NULL;
   }
   return &format_rules[format];
 }
 
-static const FormatRule format_rules[FORMAT_RULES_TABLE_SIZE] = {
+static const FormatRule format_rules[] = {
   [FORMAT_R] = {3, {OPT_REG, OPT_REG, OPT_REG}},
   [FORMAT_I] = {3, {OPT_REG, OPT_REG, OPT_IMM | OPT_LABEL}},
   [FORMAT_IS] = {3, {OPT_REG, OPT_REG, OPT_IMM}},
@@ -62,7 +61,7 @@ static const FormatRule format_rules[FORMAT_RULES_TABLE_SIZE] = {
   [FORMAT_NONE] = {0, {0}},
 };
 
-static const InstrDef instr_table[INSTR_TABLE_SIZE] = {
+static const InstrDef instr_table[] = {
   // ALU-Reg Instructions
   ALU_REG("add", ALU_ADD, EXT_ADD),
   ALU_REG("sub", ALU_ADD, EXT_SUB),

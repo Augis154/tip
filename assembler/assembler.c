@@ -14,30 +14,44 @@ void resolve_labels(AssemblerCtx *ctx, Program *program) {
   st_init(ctx->symbol_table, INITIAL_SYMBOL_TABLE_SIZE);
 
   uint32_t current_address = 0;
+
   for (size_t i = 0; i < program->count; i++) {
-    TypedLine line = program->lines[i];
+    TypedLine *line = &program->lines[i];
 
-    if (line.type != LINE_LABEL) {
-      program->lines[i].address = current_address;
-      current_address++;
-      continue;
+    line->address = current_address;
+
+    switch (line->type) {
+    case LINE_DIRECTIVE: {
+      if (line->directive_def->layout) {
+        line->directive_def->layout(ctx, line, &current_address);
+      }
+      break;
     }
+    case LINE_LABEL: {
+      Symbol *existing_symbol = st_get(ctx->symbol_table, line->label);
+      if (existing_symbol) {
+        fprintf(stderr,
+                "[Line %u] Error: Duplicate label '%s', Previously defined at line %u\n",
+                line->line_num,
+                line->label,
+                existing_symbol->line_defined);
+        continue;
+      }
 
-    Symbol *existing_symbol = st_get(ctx->symbol_table, line.label);
-    if (existing_symbol) {
-      fprintf(stderr,
-              "[Line %u] Error: Duplicate label '%s', Previously defined at line %u\n",
-              line.line_num,
-              line.label,
-              existing_symbol->line_defined);
-      continue;
+      Symbol *symbol = malloc(sizeof(Symbol));
+      symbol->type = SYM_LABEL;
+      symbol->address = current_address;
+      symbol->line_defined = line->line_num;
+
+      st_put(ctx->symbol_table, line->label, symbol);
+      break;
     }
-
-    Symbol *symbol = malloc(sizeof(Symbol));
-    symbol->address = current_address;
-    symbol->line_defined = line.line_num;
-
-    st_put(ctx->symbol_table, line.label, symbol);
+    case LINE_INSTR:
+      current_address += 4; // Assuming each instruction is 4 bytes
+      break;
+    default:
+      break;
+    }
   }
 
   for (size_t i = 0; i < program->count; i++) {
@@ -46,6 +60,8 @@ void resolve_labels(AssemblerCtx *ctx, Program *program) {
     if (line->type != LINE_INSTR) {
       continue;
     }
+
+    const InstrDef *instr_def = line->instr_def;
 
     for (size_t j = 0; j < line->arg_count; j++) {
       Operand *arg = &line->args[j];
@@ -57,15 +73,39 @@ void resolve_labels(AssemblerCtx *ctx, Program *program) {
           continue;
         }
 
-        int32_t offset = symbol->address - (int32_t)line->address;
+        arg->type = OPT_IMM;
 
-        if (offset < INT14_MIN || offset > INT14_MAX) {
-          fprintf(stderr, "[Line %u] Error: Label '%s' address out of range\n", line->line_num, arg->label_ref);
+        if (symbol->type == SYM_CONSTANT) {
+          arg->imm_value = symbol->value;
           continue;
         }
 
-        arg->type = OPT_IMM;
-        arg->imm_value = offset;
+        uint8_t opcode = instr_def->opcode;
+        uint8_t tag = opcode & MASK_TAG;
+        uint8_t fn = (opcode >> POS_FN) & MASK_FN;
+
+        int32_t imm = 0;
+
+        if (tag == TAG_CTRL && fn <= CTRL_JAS) {
+          int32_t offset = (int32_t)symbol->address - (int32_t)line->address;
+          imm = offset >> 2;
+        } else {
+          imm = symbol->address;
+        }
+
+        if (instr_def->format == FORMAT_U) {
+          if (imm < INT19_MIN || imm > INT19_MAX) {
+            fprintf(stderr, "[Line %u] Error: Label '%s' address out of range\n", line->line_num, arg->label_ref);
+            continue;
+          }
+        } else {
+          if (imm < INT14_MIN || imm > INT14_MAX) {
+            fprintf(stderr, "[Line %u] Error: Label '%s' address out of range\n", line->line_num, arg->label_ref);
+            continue;
+          }
+        }
+
+        arg->imm_value = imm;
       }
     }
   }
@@ -75,69 +115,97 @@ void assemble_lines(AssemblerCtx *ctx, Program *program) {
   for (size_t i = 0; i < program->count; i++) {
     TypedLine *line = &program->lines[i];
 
-    if (line->type != LINE_INSTR) {
-      continue;
-    }
+    switch (line->type) {
+    case LINE_ERROR:
+    case LINE_EMPTY:
+    case LINE_LABEL:
+      break;
 
-    const InstrDef *instr_def = line->instr_def;
-
-    uint32_t instruction = 0;
-    uint8_t opcode = instr_def->opcode & MASK_OP;
-
-    switch (instr_def->format) {
-    case FORMAT_R: {
-      uint8_t rd = line->args[0].reg_num & MASK_REG;
-      uint8_t r1 = line->args[1].reg_num & MASK_REG;
-      uint8_t r2 = line->args[2].reg_num & MASK_REG;
-
-      uint8_t ext = instr_def->ext & MASK_FN9;
-
-      instruction = (opcode) | (rd << POS_RD) | (r1 << POS_R1) | (r2 << POS_R2) | (ext << POS_FN9);
+    case LINE_DIRECTIVE: {
+      if (line->directive_def->emit) {
+        line->directive_def->emit(ctx, line);
+      }
       break;
     }
-    case FORMAT_NONE:
-    case FORMAT_I: {
-      uint8_t rd = line->args[0].reg_num & MASK_REG;
-      uint8_t r1 = line->args[1].reg_num & MASK_REG;
-      int32_t imm = line->args[2].imm_value & MASK_IMM14;
+    case LINE_INSTR: {
+      const InstrDef *instr_def = line->instr_def;
 
-      instruction = (opcode) | (rd << POS_RD) | (r1 << POS_R1) | (imm << POS_IMM14);
-      break;
-    }
-    case FORMAT_IS: {
-      uint8_t rd = line->args[0].reg_num & MASK_REG;
-      uint8_t r1 = line->args[1].reg_num & MASK_REG;
-      int32_t shamt = line->args[2].imm_value & MASK_SHAMT;
+      uint32_t instruction = 0;
+      uint8_t opcode = instr_def->opcode & MASK_OP;
 
-      uint16_t ext = instr_def->ext & MASK_FN9;
+      switch (instr_def->format) {
+      case FORMAT_R: {
+        uint8_t rd = line->args[0].reg_num & MASK_REG;
+        uint8_t r1 = line->args[1].reg_num & MASK_REG;
+        uint8_t r2 = line->args[2].reg_num & MASK_REG;
 
-      instruction = (opcode) | (rd << POS_RD) | (r1 << POS_R1) | (shamt << POS_SHAMT) | (ext << POS_FN9);
-      break;
-    }
-    case FORMAT_S: {
-      uint8_t r1 = line->args[0].reg_num & MASK_REG;
-      uint8_t r2 = line->args[1].reg_num & MASK_REG;
-      int32_t imm = line->args[2].imm_value & MASK_IMM14;
+        uint8_t ext = instr_def->ext & MASK_FN9;
 
-      uint16_t imm4_0 = imm & MASK_IMM4_0;
-      uint16_t imm13_5 = (imm >> 5) & MASK_IMM13_5;
+        instruction = (opcode) | (rd << POS_RD) | (r1 << POS_R1) | (r2 << POS_R2) | (ext << POS_FN9);
+        break;
+      }
+      case FORMAT_I: {
+        uint8_t rd = line->args[0].reg_num & MASK_REG;
+        uint8_t r1 = line->args[1].reg_num & MASK_REG;
+        int32_t imm = line->args[2].imm_value & MASK_IMM14;
 
-      instruction = (opcode) | (imm4_0 << POS_IMM4_0) | (r1 << POS_R1) | (r2 << POS_R2) | (imm13_5 << POS_IMM13_5);
-      break;
-    }
-    case FORMAT_U: {
-      uint8_t rd = line->args[0].reg_num & MASK_REG;
-      int32_t imm = line->args[1].imm_value & MASK_IMM19;
+        instruction = (opcode) | (rd << POS_RD) | (r1 << POS_R1) | (imm << POS_IMM14);
+        break;
+      }
+      case FORMAT_IS: {
+        uint8_t rd = line->args[0].reg_num & MASK_REG;
+        uint8_t r1 = line->args[1].reg_num & MASK_REG;
+        int32_t shamt = line->args[2].imm_value & MASK_SHAMT;
 
-      instruction = (opcode) | (rd << POS_RD) | (imm << POS_IMM19);
+        uint16_t ext = instr_def->ext & MASK_FN9;
+
+        instruction = (opcode) | (rd << POS_RD) | (r1 << POS_R1) | (shamt << POS_SHAMT) | (ext << POS_FN9);
+        break;
+      }
+      case FORMAT_S: {
+        uint8_t r1 = line->args[0].reg_num & MASK_REG;
+        uint8_t r2 = line->args[1].reg_num & MASK_REG;
+        int32_t imm = line->args[2].imm_value & MASK_IMM14;
+
+        uint16_t imm4_0 = imm & MASK_IMM4_0;
+        uint16_t imm13_5 = (imm >> 5) & MASK_IMM13_5;
+
+        instruction = (opcode) | (imm4_0 << POS_IMM4_0) | (r1 << POS_R1) | (r2 << POS_R2) | (imm13_5 << POS_IMM13_5);
+        break;
+      }
+      case FORMAT_U: {
+        uint8_t rd = line->args[0].reg_num & MASK_REG;
+        int32_t imm = line->args[1].imm_value & MASK_IMM19;
+
+        instruction = (opcode) | (rd << POS_RD) | (imm << POS_IMM19);
+        break;
+      }
+      case FORMAT_NONE: {
+        instruction = (opcode);
+        break;
+      }
+      default:
+        UNREACHABLE("Unknown instruction format");
+        break;
+      }
+
+      line->instruction = instruction;
+      line->byte_count = 4; // Each instruction is 4 bytes
+
+      uint8_t *bytes = malloc(line->byte_count);
+
+      bytes[0] = (instruction >> 24) & 0xFF;
+      bytes[1] = (instruction >> 16) & 0xFF;
+      bytes[2] = (instruction >> 8) & 0xFF;
+      bytes[3] = instruction & 0xFF;
+
+      line->bytes = bytes;
       break;
     }
     default:
-      UNREACHABLE("Unknown instruction format");
+      fprintf(stderr, "[Line %u] Error: Cannot assemble line of type %d\n", line->line_num, line->type);
       break;
     }
-
-    program->lines[i].instr = instruction;
   }
 }
 

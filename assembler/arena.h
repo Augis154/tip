@@ -13,12 +13,20 @@ typedef struct ArenaBlock {
 } ArenaBlock;
 
 typedef struct {
+  ArenaBlock *block;
+  size_t used;
+} ArenaMark;
+
+typedef struct {
   ArenaBlock *first;
   ArenaBlock *current;
 } Arena;
 
 void *arena_alloc(Arena *a, size_t size);
 void arena_free(Arena *a);
+
+ArenaMark arena_mark(Arena *a);
+void arena_rollback(Arena *a, ArenaMark mark);
 
 char *arena_strdup(Arena *a, const char *str);
 char *arena_strndup(Arena *a, const char *str, size_t len);
