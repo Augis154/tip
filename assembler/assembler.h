@@ -97,6 +97,8 @@ typedef struct {
   size_t capacity;
 } Program;
 
+void emit_uint32(uint8_t *buffer, uint32_t value);
+
 void resolve_labels(AssemblerCtx *ctx, Program *program);
 void assemble_lines(AssemblerCtx *ctx, Program *program);
 

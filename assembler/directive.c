@@ -66,10 +66,7 @@ static void emit_word(AssemblerCtx *ctx, TypedLine *line) {
   uint8_t *bytes = malloc(line->byte_count);
   for (size_t i = 0; i < line->arg_count; i++) {
     int32_t value = line->args[i].imm_value;
-    bytes[i * 4 + 0] = (value >> 24) & 0xFF;
-    bytes[i * 4 + 1] = (value >> 16) & 0xFF;
-    bytes[i * 4 + 2] = (value >> 8) & 0xFF;
-    bytes[i * 4 + 3] = value & 0xFF;
+    emit_uint32(&bytes[i * 4], value);
   }
   line->bytes = bytes;
 }

@@ -9,6 +9,13 @@
 
 #define INITIAL_SYMBOL_TABLE_SIZE 256
 
+void emit_uint32(uint8_t *buffer, uint32_t value) {
+  buffer[0] = (value >> 0) & 0xFF;
+  buffer[1] = (value >> 8) & 0xFF;
+  buffer[2] = (value >> 16) & 0xFF;
+  buffer[3] = (value >> 24) & 0xFF;
+}
+
 void resolve_labels(AssemblerCtx *ctx, Program *program) {
   ctx->symbol_table = malloc(sizeof(StrTable));
   st_init(ctx->symbol_table, INITIAL_SYMBOL_TABLE_SIZE);
@@ -193,11 +200,7 @@ void assemble_lines(AssemblerCtx *ctx, Program *program) {
       line->byte_count = 4; // Each instruction is 4 bytes
 
       uint8_t *bytes = malloc(line->byte_count);
-
-      bytes[0] = (instruction >> 24) & 0xFF;
-      bytes[1] = (instruction >> 16) & 0xFF;
-      bytes[2] = (instruction >> 8) & 0xFF;
-      bytes[3] = instruction & 0xFF;
+      emit_uint32(bytes, instruction);
 
       line->bytes = bytes;
       break;
