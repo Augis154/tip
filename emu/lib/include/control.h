@@ -3,7 +3,7 @@
 
 #include "cpu.h"
 
-void decode_control(struct cpu *cpu, uint32_t instruction, uint8_t fn4);
-void decode_jump(struct cpu *cpu, uint32_t instruction, uint8_t fn4);
+int decode_control(struct cpu *cpu, struct Instruction *instr);
+int decode_jump(struct cpu *cpu, struct Instruction *instr);
 
 #endif

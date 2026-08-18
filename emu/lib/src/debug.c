@@ -193,12 +193,22 @@ static void (*CONTROL[0xF])(struct cpu *cpu, uint32_t instruction, uint8_t tag4,
     [CTRL_JASR] = decode_i,
 };
 
-static void (**tags[0xF])(struct cpu *cpu, uint32_t instruction, uint8_t tag4, uint8_t fn4) = {
+static void (*SYS[0xF])(struct cpu *cpu, uint32_t instruction, uint8_t tag4, uint8_t fn4) = {
+    [SYS_SCALL] = NULL,
+    [SYS_SBREAK] = NULL,
+    [SYS_SRET] = NULL,
+    [SYS_SRW] = decode_i,
+    [SYS_SRS] = decode_i,
+    [SYS_SRC] = decode_i,
+};
+
+static void (**tags[])(struct cpu *cpu, uint32_t instruction, uint8_t tag4, uint8_t fn4) = {
     [TAG_ALU_REG] = ALU_REG,
     [TAG_ALU_IMM] = ALU_IMM,
     [TAG_LOAD] = LOADS,
     [TAG_STORE] = STORES,
     [TAG_CTRL] = CONTROL,
+    [TAG_SYS] = SYS,
 };
 
 void print_instr(struct cpu *cpu, uint32_t instr){

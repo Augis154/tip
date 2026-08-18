@@ -2,7 +2,6 @@
 #define ALU_H
 #include "cpu.h"
 
-void decode_alu_reg(struct cpu *cpu, uint32_t instruction, uint8_t fn4);
-void decode_alu_imm(struct cpu *cpu, uint32_t instruction, uint8_t fn4);
-
+int decode_alu_reg(struct cpu *cpu, struct Instruction *instr);
+int decode_alu_imm(struct cpu *cpu, struct Instruction *instr);
 #endif

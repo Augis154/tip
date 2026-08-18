@@ -4,16 +4,6 @@
 #include <stdlib.h>
 #include <stdio.h>
 
-static int decode_alu_common(uint32_t instruction, uint8_t *rd, uint8_t *r1)
-{
-    *rd = (instruction >> POS_RD) & MASK_REG;
-    if (*rd == 0) {
-        return 0;
-    }
-    *r1 = (instruction >> POS_R1) & MASK_REG;
-    return 1;
-}
-
 #define ALU_SIMPLE_MATCH(alu_op, maths_op) \
     case alu_op: \
         write_register(cpu, rd, maths_op); \
@@ -22,8 +12,8 @@ static int decode_alu_common(uint32_t instruction, uint8_t *rd, uint8_t *r1)
 #define ALU_DIV_MATCH(alu_op, maths_op) \
     case alu_op: \
         if (rhs == 0) { \
-            fprintf(stderr, "Division by zero in ALU function: "#alu_op); \
-            exit(1); \
+            fprintf(stderr, "Division by zero in ALU function: "#alu_op"\n"); \
+            return ERROR; \
         } \
         write_register(cpu, rd, maths_op); \
         break;
@@ -51,7 +41,7 @@ static int alu_op(struct cpu *cpu, uint8_t fn4, uint16_t fn9, uint32_t lhs, uint
         ALU_SIMPLE_MATCH(SHIFT_SRA, (int32_t)lhs >> (rhs & 0x1F))
         default:
             fprintf(stderr, "Unknown ALU shift function: %u\n", fn9);
-            exit(1);
+            return ILL_INSTR;
         }
         break;
     
@@ -74,46 +64,45 @@ static int alu_op(struct cpu *cpu, uint8_t fn4, uint16_t fn9, uint32_t lhs, uint
 
         default:
             fprintf(stderr, "Unknown ALU extension function: %u\n", fn9);
-            exit(1);
+            return ILL_INSTR;
         }
         break;
     default:
         fprintf(stderr, "Unknown ALU function: %u\n", fn4);
-        exit(1);
+        return ILL_INSTR;
     }
-    return 0;
+    return OK;
 }
 
-void decode_alu_reg(struct cpu *cpu, uint32_t instruction, uint8_t fn4)
+int decode_alu_reg(struct cpu *cpu, struct Instruction *instr)
 {
-    uint8_t rd, r1;
-    if (!decode_alu_common(instruction, &rd, &r1)) {
-        return;
-    }
-    uint8_t r2 = (instruction >> POS_R2) & MASK_REG;
-    uint16_t fn9 = (instruction >> POS_FN9) & MASK_FN9;
-
-    uint32_t r1val = get_register(cpu, r1);
-    uint32_t r2val = get_register(cpu, r2);
-
-    alu_op(cpu, fn4, fn9, r1val, r2val, rd);
+    decode_instr_operands(instr, R);
+    if(instr->operands.rType.rd == 0)
+        return OK;
+    int retval = alu_op(cpu, instr->fn, instr->operands.rType.fn9, get_register(cpu, instr->operands.rType.r1), get_register(cpu, instr->operands.rType.r2), instr->operands.rType.rd);
+    if(retval)
+        trap(cpu, STC_ALU_ERROR, instr);
+    return retval;
 }
 
-void decode_alu_imm(struct cpu *cpu, uint32_t instruction, uint8_t fn4)
+int decode_alu_imm(struct cpu *cpu, struct Instruction *instr)
 {
-    uint8_t rd, r1;
-    if (!decode_alu_common(instruction, &rd, &r1)) {
-        return;
+    if(instr->fn == ALU_SHIFT) {
+        decode_instr_operands(instr, IS);
+        if(instr->operands.iType.rd == 0)
+            return OK;
+        int retval = alu_op(cpu, instr->fn, instr->operands.isType.fn9, get_register(cpu, instr->operands.isType.r1), get_register(cpu, instr->operands.isType.shamt5), instr->operands.isType.rd);
+        if(retval)
+            trap(cpu, STC_ALU_ERROR, instr);
+        return retval;
     }
-    uint32_t imm = 0;
-    uint16_t fn9 = 0;
-    if(fn4 == ALU_SHIFT) {
-        fn9 = (instruction >> POS_FN9) & MASK_FN9;
-        imm = (instruction >> POS_SHAMT) & MASK_SHAMT;
-    } else {
-        imm = (instruction >> POS_IMM14) & MASK_IMM14;
+    else {
+        decode_instr_operands(instr, I);
+        if(instr->operands.iType.rd == 0)
+            return OK;
+        int retval = alu_op(cpu, instr->fn, 0, get_register(cpu, instr->operands.iType.r1), instr->operands.iType.imm13, instr->operands.iType.rd);
+        if(retval)
+            trap(cpu, STC_ALU_ERROR, instr);
+        return retval;
     }
-    uint32_t r1val = get_register(cpu, r1);
-
-    alu_op(cpu, fn4, fn9, r1val, imm, rd);
 }

@@ -90,6 +90,7 @@ typedef enum {
   SR_STPC = 0x51,
   SR_STC = 0x52,
   SR_STV = 0x53,
+  __SR_MAX
 } SysReg;
 
 typedef enum {

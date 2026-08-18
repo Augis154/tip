@@ -4,55 +4,50 @@
 
 #define CONTROL_OP(opc, compare, val) \
 case opc: \
-    if (get_register(cpu, r1) compare get_register(cpu, r2)) \
+    if (get_register(cpu, instr->operands.sType.r1) compare get_register(cpu, instr->operands.sType.r2)) \
         cpu->pc += (val << 2) - 4; \
     break;
 
-void decode_control(struct cpu *cpu, uint32_t instruction, uint8_t fn4){
-    if (fn4 == CTRL_JAS || fn4 == CTRL_JASR){
-        decode_jump(cpu, instruction, fn4);
-        return;
+int decode_control(struct cpu *cpu, struct Instruction *instr){
+    if (instr->fn == CTRL_JAS || instr->fn  == CTRL_JASR){
+        return decode_jump(cpu, instr);
     }
-    uint8_t r1 = (instruction >> POS_R1) & MASK_REG;
-    uint8_t r2 = (instruction >> POS_R2) & MASK_REG;
-    uint8_t imm4_0 = (instruction >> POS_IMM4_0) & MASK_IMM4_0;
-    uint16_t imm13_5 = (instruction >> POS_IMM13_5) & MASK_IMM13_5;
-    uint16_t imm = (imm13_5 << 5) | imm4_0;
-    int16_t simm = imm & 0x200 ? 0xFE00 | imm : imm;
-    switch (fn4) {
-        CONTROL_OP(CTRL_EQ, ==, simm)
-        CONTROL_OP(CTRL_NE, !=, simm)
-        CONTROL_OP(CTRL_LT, <, simm)
-        CONTROL_OP(CTRL_GE, >=, simm)
-        CONTROL_OP(CTRL_LTU, <, imm)
-        CONTROL_OP(CTRL_GEU, >=, imm)
+    decode_instr_operands(instr, S);
+    switch (instr->fn) {
+        CONTROL_OP(CTRL_EQ, ==, (int16_t)instr->operands.sType.imm)
+        CONTROL_OP(CTRL_NE, !=, (int16_t)instr->operands.sType.imm)
+        CONTROL_OP(CTRL_LT, <, (int16_t)instr->operands.sType.imm)
+        CONTROL_OP(CTRL_GE, >=, (int16_t)instr->operands.sType.imm)
+        CONTROL_OP(CTRL_LTU, <, instr->operands.sType.imm)
+        CONTROL_OP(CTRL_GEU, >=, instr->operands.sType.imm)
         default:
-            fprintf(stderr, "Unknown control function: %u\n", fn4);
+            return ILL_INSTR;
+            fprintf(stderr, "Unknown control function: %u\n", instr->fn);
             exit(1);            
     }
+    return OK;
 }
 
-void decode_jump(struct cpu *cpu, uint32_t instruction, uint8_t fn4){
-    switch (fn4) {
+int decode_jump(struct cpu *cpu, struct Instruction *instr){
+    switch (instr->fn) {
         case CTRL_JAS:
             {
-            uint8_t rd = (instruction >> POS_RD) & MASK_REG;
-            uint32_t imm = (instruction >> POS_IMM19) & MASK_IMM19;
-            write_register(cpu, rd, cpu->pc + 4);
-            cpu->pc += (imm << 2) - 4;
+            decode_instr_operands(instr, U);
+            write_register(cpu, instr->operands.uType.rd, cpu->pc + 4);
+            cpu->pc += (instr->operands.uType.imm18 << 2) - 4;
             }
             break;
         case CTRL_JASR:
             {
-            uint8_t rd = (instruction >> POS_RD) & MASK_REG;
-            uint32_t r1 = get_register(cpu, (instruction >> POS_R1) & MASK_REG);
-            uint16_t imm = (instruction >> POS_IMM14) & MASK_IMM14;
-            write_register(cpu, rd, cpu->pc + 4);
-            cpu->pc = r1 + imm - 4;
+            decode_instr_operands(instr, I);
+            uint32_t r1 = get_register(cpu, instr->operands.iType.r1);
+            write_register(cpu, instr->operands.iType.rd, cpu->pc + 4);
+            cpu->pc = r1 + instr->operands.iType.imm13 - 4;
             }
             break;
         default:
-            fprintf(stderr, "Unknown jump function: %u\n", fn4);
-            exit(1);            
+            fprintf(stderr, "Unknown jump function: %u\n", instr->fn);
+            return ILL_INSTR;
     }
+    return OK;
 }
