@@ -1,7 +1,6 @@
 #include "assembler.h"
-
 #include "../spec.h"
-#include "instr.h"
+#include "isa.h"
 
 #include <assert.h>
 #include <stdlib.h>
@@ -16,7 +15,7 @@ void emit_uint32(uint8_t *buffer, uint32_t value) {
   buffer[3] = (value >> 24) & 0xFF;
 }
 
-void resolve_labels(AssemblerCtx *ctx, Program *program) {
+void resolve_symbols(AssemblerCtx *ctx, Program *program) {
   ctx->symbol_table = malloc(sizeof(StrTable));
   st_init(ctx->symbol_table, INITIAL_SYMBOL_TABLE_SIZE);
 

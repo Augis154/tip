@@ -1,5 +1,4 @@
-#include "directive.h"
-#include "assembler.h"
+#include "isa.h"
 
 #include <stdlib.h>
 #include <string.h>

@@ -1,4 +1,4 @@
-#include "lexer.h"
+#include "frontend.h"
 
 #include <stdbool.h>
 #include <stdio.h>
@@ -125,14 +125,14 @@ static void add_line(TokenizedFile *tokenized_file, TokenizedLine line) {
   tokenized_file->lines[tokenized_file->count++] = line;
 }
 
-TokenizedFile tokenize_file(FILE *file, Arena *str_arena) {
+TokenizedFile tokenize_file(AssemblerCtx *ctx, FILE *file) {
   TokenizedFile tokenized_file = {0};
 
   char line[MAX_LINE_LENGTH];
   uint32_t count = 0;
 
   while (fgets(line, sizeof(line), file)) {
-    TokenizedLine tokenized_line = tokenize_line(line, str_arena);
+    TokenizedLine tokenized_line = tokenize_line(line, ctx->str_arena);
     tokenized_line.line_num = count + 1;
     add_line(&tokenized_file, tokenized_line);
     count++;

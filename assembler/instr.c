@@ -1,6 +1,6 @@
-#include "instr.h"
-
 #include "../spec.h"
+#include "ir.h"
+#include "isa.h"
 
 #include <stddef.h>
 #include <stdlib.h>

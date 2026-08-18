@@ -1,7 +1,7 @@
-#ifndef LEXER_H
-#define LEXER_H
+#ifndef FRONTEND_H
+#define FRONTEND_H
 
-#include "arena.h"
+#include "assembler.h"
 
 #include <stddef.h>
 #include <stdint.h>
@@ -46,6 +46,9 @@ typedef struct {
   size_t capacity;
 } TokenizedFile;
 
-TokenizedFile tokenize_file(FILE *file, Arena *str_arena);
+TokenizedFile tokenize_file(AssemblerCtx *ctx, FILE *file);
 
-#endif // LEXER_H
+Program parse_lines(AssemblerCtx *ctx, TokenizedFile *tokenized_file);
+void free_program(Program *program);
+
+#endif // FRONTEND_H

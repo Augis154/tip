@@ -1,7 +1,8 @@
-#include "parser.h"
-#include "arena.h"
-#include "directive.h"
-#include "instr.h"
+#include "frontend.h"
+#include "ir.h"
+#include "isa.h"
+
+#include "lib/arena.h"
 
 #include <ctype.h>
 #include <stdarg.h>
@@ -34,21 +35,31 @@ static bool is_token_allowed(TokenType type, uint8_t allowed_mask) {
   case TOKEN_REGISTER:
     actual = OPT_REG;
     break;
-
   case TOKEN_IMMEDIATE:
     actual = OPT_IMM;
     break;
-
   case TOKEN_IDENTIFIER:
     actual = OPT_LABEL;
     break;
-
   default:
     actual = OPT_NONE;
     break;
   }
 
   return (actual & allowed_mask) != 0;
+}
+
+static Operand token_to_operand(Token token) {
+  switch (token.type) {
+  case TOKEN_REGISTER:
+    return (Operand){.type = OPT_REG, .reg_num = token.reg_num};
+  case TOKEN_IMMEDIATE:
+    return (Operand){.type = OPT_IMM, .imm_value = token.imm_value};
+  case TOKEN_IDENTIFIER:
+    return (Operand){.type = OPT_LABEL, .label_ref = token.lexeme};
+  default:
+    return (Operand){.type = OPT_NONE};
+  }
 }
 
 static TypedLine parse_instruction(AssemblerCtx *ctx, TokenizedLine *tokenized_line) {
@@ -93,23 +104,7 @@ static TypedLine parse_instruction(AssemblerCtx *ctx, TokenizedLine *tokenized_l
         tokenized_line->line_num, "Invalid type for operand %zu of instruction '%s'\n", i + 1, mnemonic);
     }
 
-    switch (token->type) {
-    case TOKEN_REGISTER:
-      typed_line.args[i] = (Operand){.type = OPT_REG, .reg_num = token->reg_num};
-      break;
-
-    case TOKEN_IMMEDIATE:
-      typed_line.args[i] = (Operand){.type = OPT_IMM, .imm_value = token->imm_value};
-      break;
-
-    case TOKEN_IDENTIFIER:
-      typed_line.args[i] = (Operand){.type = OPT_LABEL, .label_ref = token->lexeme};
-      break;
-
-    default:
-      break;
-    }
-
+    typed_line.args[i] = token_to_operand(*token);
     token_idx++;
     typed_line.arg_count++;
 
@@ -169,23 +164,7 @@ static TypedLine parse_directive(AssemblerCtx *ctx, TokenizedLine *tokenized_lin
                           dir_name);
       }
 
-      switch (token->type) {
-      case TOKEN_REGISTER:
-        typed_line.args[typed_line.arg_count] = (Operand){.type = OPT_REG, .reg_num = token->reg_num};
-        break;
-
-      case TOKEN_IMMEDIATE:
-        typed_line.args[typed_line.arg_count] = (Operand){.type = OPT_IMM, .imm_value = token->imm_value};
-        break;
-
-      case TOKEN_IDENTIFIER:
-        typed_line.args[typed_line.arg_count] = (Operand){.type = OPT_LABEL, .label_ref = token->lexeme};
-        break;
-
-      default:
-        break;
-      }
-
+      typed_line.args[typed_line.arg_count] = token_to_operand(*token);
       typed_line.arg_count++;
       token_idx++;
 
@@ -206,21 +185,7 @@ static TypedLine parse_directive(AssemblerCtx *ctx, TokenizedLine *tokenized_lin
           tokenized_line->line_num, "Invalid type for operand %zu of directive '%s'\n", i + 1, dir_name);
       }
 
-      switch (token->type) {
-      case TOKEN_REGISTER:
-        typed_line.args[i] = (Operand){.type = OPT_REG, .reg_num = token->reg_num};
-        break;
-
-      case TOKEN_IMMEDIATE:
-        typed_line.args[i] = (Operand){.type = OPT_IMM, .imm_value = token->imm_value};
-        break;
-      case TOKEN_IDENTIFIER:
-        typed_line.args[i] = (Operand){.type = OPT_LABEL, .label_ref = token->lexeme};
-        break;
-      default:
-        break;
-      }
-
+      typed_line.args[i] = token_to_operand(*token);
       typed_line.arg_count++;
       token_idx++;
 

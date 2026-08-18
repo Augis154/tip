@@ -1,7 +1,6 @@
 #include "assembler.h"
-#include "instr.h"
-#include "lexer.h"
-#include "parser.h"
+#include "frontend.h"
+#include "isa.h"
 
 #include <ctype.h>
 #include <stdint.h>
@@ -44,7 +43,7 @@ int main(int argc, char *argv[]) {
 
   ctx.str_arena = &str_arena;
 
-  TokenizedFile tokenized_file = tokenize_file(input_file, &str_arena);
+  TokenizedFile tokenized_file = tokenize_file(&ctx, input_file);
 
   fclose(input_file);
 
@@ -61,7 +60,7 @@ int main(int argc, char *argv[]) {
 
   Program program = parse_lines(&ctx, &tokenized_file);
 
-  resolve_labels(&ctx, &program);
+  resolve_symbols(&ctx, &program);
 
   assemble_lines(&ctx, &program);
 
