@@ -89,12 +89,12 @@ SLTIU rd, r1, simm14  => rd = (r1 <  simm14) ? 1 : 0
 
 
 Loads: tag4 = 0010
-LB rd, r1, simm14     => r2 = [r1 + simm14]
-LH rd, r1, simm14     => r2 = [r1 + simm14]
-LW rd, r1, simm14     => r2 = [r1 + simm14]
+LB r2, r1, simm14     => r2 = [r1 + simm14]
+LH r2, r1, simm14     => r2 = [r1 + simm14]
+LW r2, r1, simm14     => r2 = [r1 + simm14]
 
-LBU  rd, r1, simm14   => r2 = [r1 + simm14]
-LHU  rd, r1, simm14   => r2 = [r1 + simm14]
+LBU r2, r1, simm14    => r2 = [r1 + simm14]
+LHU r2, r1, simm14    => r2 = [r1 + simm14]
 
 
 Stores: tag4 = 0011
