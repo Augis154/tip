@@ -21,7 +21,7 @@ uint32_t bootrom[0xFFC/4] = {
     I_TYPE(TAG_CTRL, CTRL_JASR, 0, 0, 4096),
 
     S_TYPE(TAG_STORE, MEM_WORD, 8192, 0, 31),
-    
+
     // S_TYPE(TAG_STORE, MEM_WORD, 8192, 0, 31),
     // S_TYPE(TAG_STORE, MEM_WORD, 8192, 0, 31),
     // S_TYPE(TAG_STORE, MEM_WORD, 8192, 0, 31),
@@ -42,10 +42,20 @@ void sigHandler(int signum){
     }
 }
 
+static void load_file_into_memory(const char* filename, struct cpu *cpu, uint32_t size, uint32_t offset) {
+    FILE *file = fopen(filename, "rb");
+    if(file){
+        fread(cpu->memory + offset, 1, size, file);
+        fclose(file);
+    }
+}
+
+const int MEM_MAX = 0x1030;
+
 int main()
 {
     struct cpu cpu;
-    init_cpu(&cpu, 4096*2);
+    init_cpu(&cpu, MEM_MAX);
     #ifdef DEBUG
     cpu.debug = 1;
     #endif
@@ -54,11 +64,9 @@ int main()
         cpu.debug = 1;
         execState = atoi(dbgval);
     }
-    FILE *file = fopen("../output.bin", "rb");
-    fread(cpu.memory + 4096, 1, 4096, file);
-    memcpy(cpu.memory, bootrom, (0xFFC/4));
-    fclose(file);
-    *(uint32_t *)(cpu.memory + RESET_VECTOR) = I_TYPE(TAG_CTRL, CTRL_JASR, 0, 0, 0);
+    load_file_into_memory("../rom.bin", &cpu, MEM_MAX, 0x0);
+    load_file_into_memory("../bootrom.bin", &cpu, 4096, 0x0);
+    // *(uint32_t *)(cpu.memory + RESET_VECTOR) = I_TYPE(TAG_CTRL, CTRL_JASR, 0, 0, 0);
     signal(SIGINT, sigHandler); 
     while(1) {
         if(execState == 0 && !cpu.trap_occured) {
