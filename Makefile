@@ -1,22 +1,25 @@
 CFLAGS = -ggdb
 
-ASM_SRC = $(wildcard assembler/*.c)
-ASM_OBJ = $(patsubst assembler/%.c, build/assembler/%.o, $(ASM_SRC))
+BUILD_DIR = build
+
+ASM_SRC = $(wildcard assembler/*.c assembler/lib/*.c)
+ASM_OBJ = $(patsubst %.c, $(BUILD_DIR)/%.o, $(ASM_SRC))
 
 all: as
 
-$(ASM_OBJ): build/assembler/%.o: assembler/%.c | build
-	gcc $(CFLAGS) -c $< -o $@
+$(BUILD_DIR)/%.o: %.c | $(BUILD_DIR)
+	$(CC) $(CFLAGS) -c $< -o $@
 
 as: $(ASM_OBJ)
 	gcc $(CFLAGS) $^ -o as
 
 build:
-	mkdir -p build
-	mkdir -p build/assembler
-
+	mkdir -p $(BUILD_DIR)
+	
+	mkdir -p $(BUILD_DIR)/assembler
+	mkdir -p $(BUILD_DIR)/assembler/lib
 
 .PHONY: clean
 
 clean:
-	rm -r build
+	rm -r $(BUILD_DIR)

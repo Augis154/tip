@@ -2,40 +2,59 @@
 #include "frontend.h"
 #include "isa.h"
 
-#include <ctype.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 
 #define shift(argc, argv) ((argc)--, (argv)++[0])
 
-static char *to_lower_len(char *s, size_t len) {
-  for (char *p = s; p < s + len; p++) {
-    *p = tolower(*p);
-  }
-  return s;
+void print_usage(const char *prg_name) {
+  fprintf(stderr, "Usage: %s <input file> [-o <output file>] [-l <listing file>]\n", prg_name);
 }
 
 int main(int argc, char *argv[]) {
-  char *prg_name = shift(argc, argv);
+  char *prg_name = argv[0];
 
-  if (argc < 1) {
-    fprintf(stderr, "Usage: %s <file>\n", prg_name);
+  char *output_filename = "output.bin";
+  char *listing_filename = NULL;
+
+  int opt;
+  while ((opt = getopt(argc, argv, "o:l:h")) != -1) {
+    switch (opt) {
+    case 'o':
+      output_filename = optarg;
+      break;
+    case 'l':
+      listing_filename = optarg;
+      break;
+    case 'h':
+      print_usage(prg_name);
+      return 0;
+    default:
+      print_usage(prg_name);
+      return 1;
+    }
+  }
+
+  if (optind >= argc) {
+    fprintf(stderr, "Error: No input file provided\n");
+    print_usage(prg_name);
     return 1;
   }
 
-  char *filename = shift(argc, argv);
+  char *input_filename = argv[optind];
 
-  FILE *input_file = fopen(filename, "rb");
+  FILE *input_file = fopen(input_filename, "rb");
   if (!input_file) {
-    fprintf(stderr, "Error opening file: %s\n", filename);
+    fprintf(stderr, "Error opening file: %s\n", input_filename);
     return 1;
   }
 
   AssemblerCtx ctx = {0};
 
-  ctx.filename = filename;
+  ctx.filename = input_filename;
 
   ctx.instr_lut = instr_create_lut();
 
@@ -64,80 +83,82 @@ int main(int argc, char *argv[]) {
 
   assemble_lines(&ctx, &program);
 
-  FILE *lst_file = fopen("output.lst", "w");
-  if (!lst_file) {
-    fprintf(stderr, "Error creating listing file\n");
-    return 1;
+  if (listing_filename) {
+    FILE *lst_file = fopen(listing_filename, "w");
+    if (!lst_file) {
+      fprintf(stderr, "Error creating listing file\n");
+      return 1;
+    }
+
+    for (size_t i = 0; i < program.count; i++) {
+      TypedLine line = program.lines[i];
+
+      uint8_t *bytes = program.lines[i].bytes;
+      size_t byte_count = program.lines[i].byte_count;
+
+      switch (line.type) {
+      case LINE_ERROR:
+      case LINE_EMPTY:
+        continue;
+
+      case LINE_LABEL:
+        // fprintf(lst_file, "\n%04X: ", line.address);
+        fprintf(lst_file, "\n%s:\n", line.label);
+        continue;
+
+      case LINE_DIRECTIVE: {
+        // fprintf(lst_file, "%04X: ", line.address);
+        fprintf(lst_file, "\n.%s", line.directive_def->name);
+
+        for (size_t j = 0; j < line.arg_count; j++) {
+          Operand arg = line.args[j];
+          switch (arg.type) {
+          case OPT_REG:
+            fprintf(lst_file, " r%u", arg.reg_num);
+            break;
+          case OPT_IMM:
+            fprintf(lst_file, " %#x (%d)", (uint32_t)arg.imm_value, (int32_t)arg.imm_value);
+            break;
+          default:
+            break;
+          }
+        }
+        break;
+      }
+
+      case LINE_INSTR: {
+        uint32_t instruction = program.lines[i].instruction;
+
+        fprintf(lst_file, "%04X: ", line.address);
+        fprintf(lst_file, "%08X    ", instruction);
+        fprintf(lst_file, "%032b    ", instruction);
+        fprintf(lst_file, "%s", line.instr_def->mnemonic);
+
+        for (size_t j = 0; j < line.arg_count; j++) {
+          Operand arg = line.args[j];
+          switch (arg.type) {
+          case OPT_REG:
+            fprintf(lst_file, " r%u", arg.reg_num);
+            break;
+          case OPT_IMM:
+            fprintf(lst_file, " %#x (%d)", (uint32_t)arg.imm_value, (int32_t)arg.imm_value);
+            break;
+          default:
+            break;
+          }
+        }
+        break;
+      }
+      }
+
+      fprintf(lst_file, "\n");
+    }
+
+    fclose(lst_file);
+    printf("Generated %s\n", listing_filename);
   }
 
-  for (size_t i = 0; i < program.count; i++) {
-    TypedLine line = program.lines[i];
-
-    uint8_t *bytes = program.lines[i].bytes;
-    size_t byte_count = program.lines[i].byte_count;
-
-    switch (line.type) {
-    case LINE_ERROR:
-    case LINE_EMPTY:
-      continue;
-
-    case LINE_LABEL:
-      // fprintf(lst_file, "\n%04X: ", line.address);
-      fprintf(lst_file, "\n%s:\n", line.label);
-      continue;
-
-    case LINE_DIRECTIVE: {
-      // fprintf(lst_file, "%04X: ", line.address);
-      fprintf(lst_file, "\n.%s", line.directive_def->name);
-
-      for (size_t j = 0; j < line.arg_count; j++) {
-        Operand arg = line.args[j];
-        switch (arg.type) {
-        case OPT_REG:
-          fprintf(lst_file, " r%u", arg.reg_num);
-          break;
-        case OPT_IMM:
-          fprintf(lst_file, " %#x (%d)", (uint32_t)arg.imm_value, (int32_t)arg.imm_value);
-          break;
-        default:
-          break;
-        }
-      }
-      break;
-    }
-
-    case LINE_INSTR: {
-      uint32_t instruction = program.lines[i].instruction;
-
-      fprintf(lst_file, "%04X: ", line.address);
-      fprintf(lst_file, "%08X    ", instruction);
-      fprintf(lst_file, "%032b    ", instruction);
-      fprintf(lst_file, "%s", line.instr_def->mnemonic);
-
-      for (size_t j = 0; j < line.arg_count; j++) {
-        Operand arg = line.args[j];
-        switch (arg.type) {
-        case OPT_REG:
-          fprintf(lst_file, " r%u", arg.reg_num);
-          break;
-        case OPT_IMM:
-          fprintf(lst_file, " %#x (%d)", (uint32_t)arg.imm_value, (int32_t)arg.imm_value);
-          break;
-        default:
-          break;
-        }
-      }
-      break;
-    }
-    }
-
-    fprintf(lst_file, "\n");
-  }
-
-  fclose(lst_file);
-  printf("Generated output.lst\n");
-
-  FILE *output_file = fopen("output.bin", "wb");
+  FILE *output_file = fopen(output_filename, "wb");
   if (!output_file) {
     fprintf(stderr, "Error creating output file\n");
     return 1;
@@ -162,7 +183,7 @@ int main(int argc, char *argv[]) {
   }
 
   fclose(output_file);
-  printf("Output written to output.bin\n");
+  printf("Output written to %s\n", output_filename);
 
   // for (size_t i = 0; i < program.count; i++) {
   //   TypedLine line = program.lines[i];
