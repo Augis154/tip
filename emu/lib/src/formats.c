@@ -46,7 +46,7 @@ void decode_instr_operands(struct Instruction *instr, OperandFormat fmt) {
         {
             struct U_Type *ops = &instr->operands.uType;
             ops->rd = (instr->raw >> POS_RD) & MASK_REG;
-            uint16_t imm = (instr->raw >> POS_IMM19) & MASK_IMM19;\
+            uint32_t imm = (instr->raw >> POS_IMM19) & MASK_IMM19;\
             ops->imm18 = imm & 0x40000 ? ~(uint32_t)MASK_IMM19 | imm : imm;
         }
             break;
