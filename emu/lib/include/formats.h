@@ -48,7 +48,8 @@ typedef enum {
     I,
     IS,
     S,
-    U
+    U,
+    None,
 } OperandFormat;
 
 struct Instruction {

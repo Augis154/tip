@@ -54,16 +54,20 @@ uint16_t get_halfword(struct cpu *cpu, uint32_t address)
         fprintf(stderr, "Address out of bounds: %u\n", address);
         exit(1);
     }
-    return *(uint16_t *)(cpu->memory + address);
+    return  ((uint16_t)*(cpu->memory + address + 0))       |
+            ((uint16_t)*(cpu->memory + address + 1) << 8);
 }
 
 uint32_t get_word(struct cpu *cpu, uint32_t address)
 {
-    if (address >= cpu->memory_size - 3) {
+    if (address > cpu->memory_size - 4) {
         fprintf(stderr, "Address out of bounds: %u\n", address);
         exit(1);
     }
-    return *(uint32_t *)(cpu->memory + address);
+    return  ((uint32_t)*(cpu->memory + address + 0))       |
+            ((uint32_t)*(cpu->memory + address + 1) << 8)  |
+            ((uint32_t)*(cpu->memory + address + 2) << 16) |
+            ((uint32_t)*(cpu->memory + address + 3) << 24);
 }
 
 uint32_t get_register(struct cpu *cpu, uint8_t reg_num)
@@ -160,7 +164,7 @@ void step(struct cpu *cpu)
     instr.fn = (instr.raw >> POS_FN) & MASK_FN;
     
     if (cpu->debug)
-        print_instr(cpu, instr.raw);
+        print_instr(cpu, &instr);
 
     int (*decoder)(struct cpu *, struct Instruction *) = instruction_decoders[instr.tag];
     if (decoder) {
