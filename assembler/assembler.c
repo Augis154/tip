@@ -169,8 +169,8 @@ void assemble_lines(AssemblerCtx *ctx, Program *program) {
         break;
       }
       case FORMAT_S: {
-        uint8_t r1 = line->args[0].reg_num & MASK_REG;
-        uint8_t r2 = line->args[1].reg_num & MASK_REG;
+        uint8_t r2 = line->args[0].reg_num & MASK_REG;
+        uint8_t r1 = line->args[1].reg_num & MASK_REG;
         int32_t imm = line->args[2].imm_value & MASK_IMM14;
 
         uint16_t imm4_0 = imm & MASK_IMM4_0;
