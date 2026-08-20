@@ -29,7 +29,9 @@ uint8_t get_byte(struct cpu *cpu, uint32_t address);
 uint16_t get_halfword(struct cpu *cpu, uint32_t address);
 uint32_t get_word(struct cpu *cpu, uint32_t address);
 uint32_t get_register(struct cpu *cpu, uint8_t reg_num);
+int write_byte(struct cpu *cpu, uint32_t address, uint8_t value);
+int write_halfword(struct cpu *cpu, uint32_t address, uint16_t value);
+int write_word(struct cpu *cpu, uint32_t address, uint32_t value);
 int write_register(struct cpu *cpu, uint8_t reg_num, uint32_t value);
-uint32_t get_register(struct cpu *cpu, uint8_t reg_num);
 
 #endif

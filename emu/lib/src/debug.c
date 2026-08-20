@@ -22,7 +22,7 @@ struct InstructionFormat instr_tags[0x10][0x10] = {
         },
         [ALU_AND] = {"and", R, 0},
         [ALU_OR] = {"or", R, 0},
-        [ALU_XOR] = {"or", R, 0},
+        [ALU_XOR] = {"xor", R, 0},
         [ALU_SHIFT] = {"n/a", R, 0, 0, (struct InstructionFormat[]) {
             {"sll", R, 0, SHIFT_SLL, NULL},
             {"srl", R, 0, SHIFT_SRL, NULL},
@@ -119,48 +119,53 @@ void print_instr(struct cpu *cpu, struct Instruction *instr){
     switch(fmt->fmt) {
         case R:
             FETCH_SUBVAR(rType)
-            fprintf(stderr, "%s, r%i, r%i, r%i", 
+            fprintf(stderr, "%s r%i, r%i, r%i",
                 fmt->name, 
                 instr->operands.rType.rd, 
                 instr->operands.rType.r1, 
                 instr->operands.rType.r2);
             break;
-        case I:
-            if(fmt->isSigned)
-                fprintf(stderr, "%s, r%i, r%i, %hi", 
+        case I: {
+            if(fmt->isSigned) {
+                fprintf(stderr, "%s r%i, r%i, %hi",
                     fmt->name, 
                     instr->operands.iType.rd, 
                     instr->operands.iType.r1,
                     instr->operands.iType.imm13);
-            else
-                fprintf(stderr, "%s, r%i, r%i, %u", 
+            }
+            else {
+                fprintf(stderr, "%s r%i, r%i, %u",
                     fmt->name, 
                     instr->operands.iType.rd, 
                     instr->operands.iType.r1,
                     instr->operands.iType.imm13);
+            }
+        }
             break;
         case IS:
             FETCH_SUBVAR(isType)
-            fprintf(stderr, "%s, r%i, r%i, %u", 
+            fprintf(stderr, "%s r%i, r%i, %u",
                 fmt->name, 
                 instr->operands.isType.rd, 
                 instr->operands.isType.r1,
                 instr->operands.isType.shamt5);
             break;
         case S:
-            fprintf(stderr, "%s, r%i, r%i, %hi", 
+            fprintf(stderr, "%s r%i, r%i, %hi",
                 fmt->name, 
                 instr->operands.sType.r2, 
                 instr->operands.sType.r1,
                 instr->operands.sType.imm);
             break;
         case U:
-            fprintf(stderr, "%s, r%i, %i", 
+            fprintf(stderr, "%s r%i, %i",
                 fmt->name, 
                 instr->operands.uType.rd, 
                 instr->operands.uType.imm18);
             break;
-        default:
+        case None:
+            fprintf(stderr, "%s",
+                fmt->name);
             break;
     }
     fprintf(stderr, "\n");

@@ -50,7 +50,7 @@ static void load_file_into_memory(const char* filename, struct cpu *cpu, uint32_
     }
 }
 
-const int MEM_MAX = 0x1030;
+const int MEM_MAX = 0x3000;
 
 int main()
 {
@@ -61,16 +61,24 @@ int main()
     #endif
     char *dbgval;
     if ((dbgval = getenv("DEBUG"))) {
-        cpu.debug = 1;
         execState = atoi(dbgval);
+        cpu.debug = execState;
     }
     load_file_into_memory("../rom.bin", &cpu, MEM_MAX, 0x0);
     load_file_into_memory("../bootrom.bin", &cpu, 4096, 0x0);
+    write_word(&cpu, 0, MEM_MAX);
     // *(uint32_t *)(cpu.memory + RESET_VECTOR) = I_TYPE(TAG_CTRL, CTRL_JASR, 0, 0, 0);
     signal(SIGINT, sigHandler); 
     while(1) {
         if(execState == 0 && !cpu.trap_occured) {
             step(&cpu);
+            char msg[5];
+            for(int i = 0; i < 4; i++) {
+                msg[i] = cpu.memory[MEM_MAX - 4 + i];
+                cpu.memory[MEM_MAX - 4 + i] = 0;
+            }
+            msg[4] = 0;
+            fprintf(stdout, "%s", msg);
             continue;            
         }
         if(cpu.trap_occured)

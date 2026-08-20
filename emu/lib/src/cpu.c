@@ -92,6 +92,40 @@ int write_register(struct cpu *cpu, uint8_t reg_num, uint32_t value)
     return 1;
 }
 
+int write_word(struct cpu *cpu, uint32_t address, uint32_t value)
+{
+    if (address > cpu->memory_size - 4) {
+        fprintf(stderr, "Address out of bounds: %u\n", address);
+        return 1;
+    }
+    *(cpu->memory + address + 0) = (uint8_t) value;
+    *(cpu->memory + address + 1) = (uint8_t) (value >> 8);
+    *(cpu->memory + address + 2) = (uint8_t) (value >> 16);
+    *(cpu->memory + address + 3) = (uint8_t) (value >> 24);
+    return 0;
+}
+
+int write_halfword(struct cpu *cpu, uint32_t address, uint16_t value)
+{
+    if (address > cpu->memory_size - 2) {
+        fprintf(stderr, "Address out of bounds: %u\n", address);
+        return 1;
+    }
+    *(cpu->memory + address + 0) = (uint8_t) value;
+    *(cpu->memory + address + 1) = (uint8_t) (value >> 8);
+    return 0;
+}
+
+int write_byte(struct cpu *cpu, uint32_t address, uint8_t value)
+{
+    if (address > cpu->memory_size - 1) {
+        fprintf(stderr, "Address out of bounds: %u\n", address);
+        return 1;
+    }
+    *(cpu->memory + address) = value;
+    return 0;
+}
+
 static InstructionDecoder instruction_decoders[16] = {
     [TAG_ALU_REG] = decode_alu_reg,
     [TAG_ALU_IMM] = decode_alu_imm,

@@ -225,9 +225,8 @@ void handle_debug(struct cpu *cpu, int *state) {
     }
     else if (CMD("run"))
     {
-        if (!getenv("DEBUG"))
-            cpu->debug = 0;
         *state = 0;
+        cpu->trap_occured = 0;
     }
     else if (CMD_ARGS("wr", _write_register)) {}
     else if (CMD_ARGS("gr", _get_register)) {}

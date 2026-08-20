@@ -3,7 +3,7 @@ obj_files:=$(src:.c=.o)
 
 header_files:=$(wildcard include/*.h)
 PHONY:=clean
-CPPFLAGS:=-I./include -Wall -Wextra -Werror -O2 $(DBGFLAGS) -g $(HEADERS) $(LIBPATH) $(LIBRARIES)
+CPPFLAGS:=-I./include -Wall -Wextra -Werror -O0 $(DBGFLAGS) -g $(HEADERS) $(LIBPATH) $(LIBRARIES)
 
 ifeq ($(DEBUG), 1)
 	DBGFLAGS:=-DDEBUG -g -O0
