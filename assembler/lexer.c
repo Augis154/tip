@@ -1,4 +1,5 @@
 #include "frontend.h"
+#include "lib/arena.h"
 
 #include <stdbool.h>
 #include <stdio.h>
@@ -64,6 +65,54 @@ static TokenizedLine tokenize_line(const char *line, Arena *str_arena) {
       token->type = TOKEN_COLON;
       token->lexeme = ":";
       current++;
+      continue;
+
+    case '"':
+      current++;
+
+      const char *start = current;
+      char *dest = (char *)current;
+
+      while (*current && *current != '"') {
+        if (*current == '\\') {
+          current++;
+          switch (*current) {
+          case 'n':
+            *dest = '\n';
+            break;
+          case 't':
+            *dest = '\t';
+            break;
+          case '\\':
+            *dest = '\\';
+            break;
+          case '"':
+            *dest = '"';
+            break;
+          default:
+            *dest = *current;
+            break;
+          }
+        } else {
+          *dest = *current;
+        }
+
+        current++;
+        dest++;
+      }
+      *dest = '\0';
+
+      if (*current != '"') {
+        token->type = TOKEN_ERROR;
+        token->lexeme = "Unterminated string literal";
+        return tokenized_line;
+      }
+
+      char *str_copy = arena_strdup(str_arena, start);
+      token->type = TOKEN_STRING;
+      token->lexeme = str_copy;
+
+      current++; // Skip the closing quote
       continue;
 
     case 'R':

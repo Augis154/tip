@@ -18,10 +18,11 @@ typedef enum {
 } LineType;
 
 typedef enum {
-  OPT_NONE = 0b000,
-  OPT_REG = 0b001,
-  OPT_IMM = 0b010,
-  OPT_LABEL = 0b100,
+  OPT_NONE = 0b0000,
+  OPT_REG = 0b0001,
+  OPT_IMM = 0b0010,
+  OPT_LABEL = 0b0100,
+  OPT_STRING = 0b1000,
 } OperandType;
 
 typedef struct {
@@ -31,6 +32,7 @@ typedef struct {
     uint8_t reg_num;
     int32_t imm_value;
     const char *label_ref;
+    const char *string_value;
   };
 } Operand;
 

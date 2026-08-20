@@ -41,6 +41,9 @@ static bool is_token_allowed(TokenType type, uint8_t allowed_mask) {
   case TOKEN_IDENTIFIER:
     actual = OPT_LABEL;
     break;
+  case TOKEN_STRING:
+    actual = OPT_STRING;
+    break;
   default:
     actual = OPT_NONE;
     break;
@@ -57,6 +60,8 @@ static Operand token_to_operand(Token token) {
     return (Operand){.type = OPT_IMM, .imm_value = token.imm_value};
   case TOKEN_IDENTIFIER:
     return (Operand){.type = OPT_LABEL, .label_ref = token.lexeme};
+  case TOKEN_STRING:
+    return (Operand){.type = OPT_STRING, .string_value = token.lexeme};
   default:
     return (Operand){.type = OPT_NONE};
   }

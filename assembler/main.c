@@ -2,6 +2,7 @@
 #include "frontend.h"
 #include "isa.h"
 
+#include <ctype.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -66,13 +67,13 @@ int main(int argc, char *argv[]) {
 
   fclose(input_file);
 
-  // for (size_t i = 0; i < line_count; i++) {
-  //   TokenizedLine *tokenized_line = &tokenized_lines[i];
+  // for (size_t i = 0; i < tokenized_file.count; i++) {
+  //   TokenizedLine *tokenized_line = &tokenized_file.lines[i];
 
   //   printf("Line %u: ", tokenized_line->line_num);
   //   for (size_t j = 0; j < tokenized_line->count; j++) {
   //     Token *token = &tokenized_line->tokens[j];
-  //     printf("[%.*s] ", (int)token->lexeme_length, token->lexeme);
+  //     printf("[%s] ", token->lexeme);
   //   }
   //   printf("\n");
   // }
@@ -119,6 +120,22 @@ int main(int argc, char *argv[]) {
           case OPT_IMM:
             fprintf(lst_file, " %#x (%d)", (uint32_t)arg.imm_value, (int32_t)arg.imm_value);
             break;
+          case OPT_STRING: {
+            fprintf(lst_file, " \"");
+
+            char *str = (char *)arg.string_value;
+            while (*str) {
+              if (isprint(*str)) {
+                fprintf(lst_file, "%c", *str);
+              } else {
+                fprintf(lst_file, "\\x%02X", (unsigned char)*str);
+              }
+              str++;
+            }
+
+            fprintf(lst_file, "\"");
+            break;
+          }
           default:
             break;
           }

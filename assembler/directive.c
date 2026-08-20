@@ -70,6 +70,32 @@ static void emit_word(AssemblerCtx *ctx, TypedLine *line) {
   line->bytes = bytes;
 }
 
+static void layout_string(AssemblerCtx *ctx, TypedLine *line, uint32_t *current_address) {
+  for (size_t i = 0; i < line->arg_count; i++) {
+    const char *str = line->args[i].string_value;
+    size_t str_len = strlen(str);
+    *current_address += str_len + 1; // +1 for null terminator
+  }
+}
+static void emit_string(AssemblerCtx *ctx, TypedLine *line) {
+  size_t total_length = 0;
+  for (size_t i = 0; i < line->arg_count; i++) {
+    const char *str = line->args[i].string_value;
+    total_length += strlen(str) + 1; // +1 for null terminator
+  }
+
+  line->byte_count = total_length;
+  line->bytes = malloc(total_length);
+  size_t offset = 0;
+  for (size_t i = 0; i < line->arg_count; i++) {
+    const char *str = line->args[i].string_value;
+    size_t str_len = strlen(str);
+    memcpy(line->bytes + offset, str, str_len);
+    line->bytes[offset + str_len] = '\0';
+    offset += str_len + 1;
+  }
+}
+
 const DirectiveDef *find_directive(const char *name) {
   for (size_t i = 0; directive_table[i].name != NULL; i++) {
     if (strcmp(directive_table[i].name, name) == 0) {
@@ -85,7 +111,7 @@ static const DirectiveDef directive_table[] = {
   // {"align", layout_equ, NULL, 1, {OPT_IMM}},
   {"byte", layout_byte, emit_byte, UNLIMITED_ARGS, {OPT_IMM}},
   {"word", layout_word, emit_word, UNLIMITED_ARGS, {OPT_IMM}},
-  // {"string", layout_string, emit_string, UNLIMITED_ARGS, {OPT_STRING}},
+  {"string", layout_string, emit_string, UNLIMITED_ARGS, {OPT_STRING}},
   // {"asciz", layout_asciz, emit_asciz, UNLIMITED_ARGS, {OPT_STRING}},
   // {"space", layout_space, emit_space, 1, {OPT_IMM}},
   {NULL, NULL, NULL, 0, {0}},
