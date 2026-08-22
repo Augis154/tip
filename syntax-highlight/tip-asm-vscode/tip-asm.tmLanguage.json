@@ -1,0 +1,109 @@
+{
+  "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+  "name": "TIP Assembly",
+  "patterns": [
+    { "include": "#comments" },
+    { "include": "#labels" },
+    { "include": "#directives" },
+    { "include": "#instructions" },
+    { "include": "#registers" },
+    { "include": "#constants" },
+    { "include": "#numbers" }
+  ],
+  "repository": {
+    "comments": {
+      "patterns": [
+        {
+          "name": "comment.line.semicolon.tip-asm",
+          "match": ";.*$"
+        }
+      ]
+    },
+    "labels": {
+      "patterns": [
+        {
+          "name": "entity.name.function.label.tip-asm",
+          "match": "^\\s*[a-zA-Z_][a-zA-Z0-9_]*:"
+        }
+      ]
+    },
+    "directives": {
+      "patterns": [
+        {
+          "name": "keyword.control.directive.tip-asm",
+          "match": "\\.[a-zA-Z_]+"
+        }
+      ]
+    },
+    "instructions": {
+      "patterns": [
+        {
+          "comment": "Alu-Reg Instructions",
+          "name": "keyword.operator.mnemonic.tip-asm",
+          "match": "(?i)\\b(add|sub|and|or|xor|sll|srl|sra|seq|sne|slt|sltu|mul|mulh|mulhu|div|rem|divu|remu)\\b"
+        },
+        {
+          "comment": "Alu-Imm Instructions",
+          "name": "keyword.operator.mnemonic.tip-asm",
+          "match": "(?i)\\b(addi|andi|ori|xori|slli|srli|srai|seqi|snei|slti|sltiu)\\b"
+        },
+        {
+          "comment": "Memory access Instructions",
+          "name": "keyword.other.mnemonic.tip-asm",
+          "match": "(?i)\\b(lb|lh|lw|lbu|lhu|sb|sh|sw)\\b"
+        },
+        {
+          "comment": "Control Instructions",
+          "name": "keyword.control.anchor.tip-asm",
+          "match": "(?i)\\b(beq|bne|blt|bge|bltu|bgeu|jas|jasr)\\b"
+        },
+        {
+          "comment": "Upper Instructions",
+          "name": "keyword.other.mnemonic.tip-asm",
+          "match": "(?i)\\b(lui|auipc)\\b"
+        },
+        {
+          "comment": "System Instructions",
+          "name": "keyword.other.special.tip-asm",
+          "match": "(?i)\\b(scall|sbreak|sret|srw|srs|src)\\b"
+        }
+      ]
+    },
+    "registers": {
+      "patterns": [
+        {
+          "name": "variable.parameter.register.tip-asm",
+          "match": "(?i)\\br[0-9]+\\b"
+        }
+      ]
+    },
+    "constants": {
+      "patterns": [
+        {
+          "name": "variable.other.constant.tip-asm",
+          "match": "\\b[A-Z_][A-Z0-9_]*\\b"
+        }
+      ]
+    },
+    "numbers": {
+      "patterns": [
+        {
+          "comment": "Hexadecimal (0x...)",
+          "name": "constant.numeric.hex.tip-asm",
+          "match": "\\b0[xX][0-9a-fA-F]+\\b"
+        },
+        {
+          "comment": "Binary (0b...)",
+          "name": "constant.numeric.binary.tip-asm",
+          "match": "\\b0[bB][01]+\\b"
+        },
+        {
+          "comment": "Decimal",
+          "name": "constant.numeric.decimal.tip-asm",
+          "match": "\\b\\d+\\b"
+        }
+      ]
+    }
+  },
+  "scopeName": "source.tip-asm"
+}

@@ -1,0 +1,34 @@
+{
+  "name": "tip-asm",
+  "displayName": "Tip Assembly",
+  "description": "",
+  "version": "0.0.1",
+  "engines": {
+    "vscode": "^1.134.0"
+  },
+  "categories": [
+    "Programming Languages"
+  ],
+  "contributes": {
+    "languages": [
+      {
+        "id": "tip-asm",
+        "aliases": [
+          "TIP Assembly",
+          "asm"
+        ],
+        "extensions": [
+          ".asm"
+        ],
+        "configuration": "./language-configuration.json"
+      }
+    ],
+    "grammars": [
+      {
+        "language": "tip-asm",
+        "scopeName": "source.tip-asm",
+        "path": "./tip-asm.tmLanguage.json"
+      }
+    ]
+  }
+}

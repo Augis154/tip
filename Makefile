@@ -1,5 +1,6 @@
 CFLAGS = -ggdb
 
+CURRENT_DIR := $(shell dirname $(realpath $(firstword $(MAKEFILE_LIST))))
 BUILD_DIR = build
 
 ASM_SRC = $(wildcard assembler/*.c assembler/lib/*.c)
@@ -23,3 +24,6 @@ build:
 
 clean:
 	rm -r $(BUILD_DIR)
+
+install-syntax-highlighter:
+	ln -sfn "$(CURRENT_DIR)/syntax-highlight/tip-asm-vscode" "$$HOME/.vscode/extensions/tip-asm-vscode"
